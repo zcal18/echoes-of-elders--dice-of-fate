@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
-import { Swords, Home, BookOpen, Crown, MessageSquare, Users, Mail, ShoppingCart } from 'lucide-react-native';
+import { Swords, Home, BookOpen, Crown, MessageSquare, Users, Mail, ShoppingCart, Package } from 'lucide-react-native';
 import colors from '@/constants/colors';
 
 export default function TabLayout() {
@@ -42,7 +42,7 @@ export default function TabLayout() {
         name="inventory"
         options={{
           title: 'Inventory',
-          tabBarIcon: ({ color, size }) => <Swords size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Package size={size} color={color} />,
         }}
       />
       
