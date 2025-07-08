@@ -129,7 +129,8 @@ export default function CommunityScreen() {
     try {
       await joinChannelMutation.mutateAsync({
         guildId,
-        userId: activeCharacter.id
+        userId: activeCharacter.id,
+        userName: activeCharacter.name
       });
     } catch (error) {
       console.error('Failed to join guild channel:', error);

@@ -33,9 +33,10 @@ export const chatRouter = createTRPCRouter({
 
   joinChannel: protectedProcedure
     .input(z.object({
-      channelId: z.string(),
+      channelId: z.string().optional(),
+      guildId: z.string().optional(),
       userId: z.string(),
-      userName: z.string(),
+      userName: z.string().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       // Verify that the user matches the authenticated user
@@ -43,14 +44,20 @@ export const chatRouter = createTRPCRouter({
         throw new Error('Unauthorized: Cannot join channel as another user');
       }
       
+      const targetId = input.channelId || input.guildId;
+      if (!targetId) {
+        throw new Error('Either channelId or guildId must be provided');
+      }
+      
       // In a real implementation, this would update user presence in database
-      console.log(`User ${input.userName} (${input.userId}) joined channel ${input.channelId}`);
-      return { success: true, channelId: input.channelId };
+      console.log(`User ${input.userName || ctx.user.name} (${input.userId}) joined ${input.guildId ? 'guild' : 'channel'} ${targetId}`);
+      return { success: true, channelId: targetId };
     }),
 
   leaveChannel: protectedProcedure
     .input(z.object({
-      channelId: z.string(),
+      channelId: z.string().optional(),
+      guildId: z.string().optional(),
       userId: z.string(),
     }))
     .mutation(async ({ input, ctx }) => {
@@ -59,17 +66,27 @@ export const chatRouter = createTRPCRouter({
         throw new Error('Unauthorized: Cannot leave channel as another user');
       }
       
+      const targetId = input.channelId || input.guildId;
+      if (!targetId) {
+        throw new Error('Either channelId or guildId must be provided');
+      }
+      
       // In a real implementation, this would update user presence in database
-      console.log(`User ${input.userId} left channel ${input.channelId}`);
-      return { success: true, channelId: input.channelId };
+      console.log(`User ${input.userId} left ${input.guildId ? 'guild' : 'channel'} ${targetId}`);
+      return { success: true, channelId: targetId };
     }),
 
   createChannel: protectedProcedure
     .input(z.object({
-      name: z.string().min(1).max(50),
-      description: z.string().max(200),
-      isPrivate: z.boolean(),
+      name: z.string().min(1).max(50).optional(),
+      description: z.string().max(200).optional(),
+      isPrivate: z.boolean().optional(),
       createdBy: z.string(),
+      // Guild-specific fields
+      guildId: z.string().optional(),
+      guildName: z.string().optional(),
+      guildTag: z.string().optional(),
+      members: z.array(z.string()).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       // Verify that the creator matches the authenticated user
@@ -79,16 +96,18 @@ export const chatRouter = createTRPCRouter({
       
       // In a real implementation, this would save to database
       const channel = {
-        id: Date.now().toString(),
-        name: input.name,
-        description: input.description,
-        isPrivate: input.isPrivate,
+        id: input.guildId || Date.now().toString(),
+        name: input.guildName || input.name || 'Unnamed Channel',
+        description: input.description || '',
+        isPrivate: input.isPrivate || false,
         createdBy: input.createdBy,
         createdAt: Date.now(),
-        members: [input.createdBy],
+        members: input.members || [input.createdBy],
+        guildId: input.guildId,
+        guildTag: input.guildTag,
       };
       
-      console.log(`User ${ctx.user.name} created channel: ${input.name}`);
+      console.log(`User ${ctx.user.name} created ${input.guildId ? 'guild channel' : 'channel'}: ${channel.name}`);
       return channel;
     }),
 
