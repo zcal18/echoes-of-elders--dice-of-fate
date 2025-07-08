@@ -887,7 +887,7 @@ const styles = StyleSheet.create({
   chatHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.surfaceLight,
     backgroundColor: colors.surface,
@@ -922,11 +922,11 @@ const styles = StyleSheet.create({
   },
   messageList: {
     flex: 1,
-    padding: 16,
+    padding: 8,
   },
   // Enhanced desktop message list for wider content
   desktopMessageList: {
-    paddingHorizontal: 24, // More padding for desktop
+    paddingHorizontal: 12, // Reduced padding for desktop
   },
   membersPanel: {
     borderLeftWidth: 1,
@@ -981,10 +981,10 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   messageContainer: {
-    padding: 12,
+    padding: 8,
     borderRadius: 8,
     backgroundColor: colors.surface,
-    marginBottom: 8,
+    marginBottom: 6,
     // Enhanced width utilization for messages
     width: '100%',
   },
@@ -1051,7 +1051,7 @@ const styles = StyleSheet.create({
   // Enhanced Input Container Styles
   inputContainer: {
     flexDirection: 'row',
-    padding: 8,
+    padding: 6,
     gap: 6,
     borderTopWidth: 1,
     borderTopColor: colors.surfaceLight,
@@ -1059,12 +1059,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   desktopInputContainer: {
-    padding: 12,
+    padding: 8,
     gap: 12,
   },
   // Enhanced desktop input container for wider layout
   desktopInputContainerWide: {
-    paddingHorizontal: 24, // More padding for desktop
+    paddingHorizontal: 12, // Reduced padding for desktop
     gap: 16,
   },
   inlineInputControls: {

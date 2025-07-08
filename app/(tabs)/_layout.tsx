@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
-import { Swords, Home, BookOpen, Crown, MessageSquare, Users } from 'lucide-react-native';
+import { Swords, Home, BookOpen, Crown, MessageSquare, Users, Mail, ShoppingCart } from 'lucide-react-native';
 import colors from '@/constants/colors';
 
 export default function TabLayout() {
@@ -78,21 +78,23 @@ export default function TabLayout() {
         }}
       />
       
-      {/* Hidden tabs - accessible via top icons */}
       <Tabs.Screen
         name="inbox"
         options={{
-          href: null, // Hide from tab bar
+          title: 'Inbox',
+          tabBarIcon: ({ color, size }) => <Mail size={size} color={color} />,
         }}
       />
       
       <Tabs.Screen
         name="shop"
         options={{
-          href: null, // Hide from tab bar
+          title: 'Shop',
+          tabBarIcon: ({ color, size }) => <ShoppingCart size={size} color={color} />,
         }}
       />
       
+      {/* Hidden tabs - accessible via top icons */}
       <Tabs.Screen
         name="profile"
         options={{
