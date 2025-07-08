@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Dimensions } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Package, Gem, Minus, Plus } from 'lucide-react-native';
 import { useGameStore } from '@/hooks/useGameStore';
 import colors from '@/constants/colors';
@@ -150,13 +150,6 @@ export default function ShopScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen 
-        options={{
-          title: 'Shop',
-          headerShown: true,
-        }}
-      />
-      
       {/* Currency Display */}
       <View style={styles.currencyBar}>
         <View style={styles.currencyItem}>

@@ -16,10 +16,7 @@ export default function TabLayout() {
           paddingBottom: Platform.OS === 'ios' ? 28 : 8,
           paddingTop: 8,
         },
-        headerStyle: {
-          backgroundColor: colors.surface,
-        },
-        headerTintColor: colors.text,
+        headerShown: false,
       }}
     >
       <Tabs.Screen

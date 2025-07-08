@@ -301,33 +301,6 @@ export default function KingdomScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen 
-        options={{
-          headerRight: () => (
-            <View style={styles.headerButtons}>
-              <TouchableOpacity 
-                style={styles.headerButton}
-                onPress={() => router.push('/(tabs)/inbox')}
-              >
-                <Mail size={isTablet ? 24 : 20} color={colors.text} />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.headerButton}
-                onPress={() => router.push('/(tabs)/shop')}
-              >
-                <ShoppingCart size={isTablet ? 24 : 20} color={colors.text} />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.headerButton}
-                onPress={() => router.push('/(tabs)/profile')}
-              >
-                <User size={isTablet ? 24 : 20} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-          ),
-        }}
-      />
-      
       <ScrollView contentContainerStyle={styles.content}>
         {kingGuild && (
           <View style={styles.kingdomHeader}>
@@ -548,7 +521,7 @@ export default function KingdomScreen() {
             <Text style={styles.legendText}>Strategic Waterway</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendColor, { backgroundColor: colors.success }]} />
+            <View style={[styles.legendColor, { backgroundColor: colors.forest }]} />
             <Text style={styles.legendText}>Ancient Forest</Text>
           </View>
           <View style={styles.legendItem}>
@@ -581,21 +554,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    gap: 8,
-    marginRight: 8,
-  },
-  headerButton: {
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    padding: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
   content: {
     padding: isTablet ? 24 : 16,
@@ -727,8 +685,8 @@ const styles = StyleSheet.create({
     borderColor: colors.waterLight,
   },
   forestCell: {
-    backgroundColor: colors.success,
-    borderColor: colors.primaryLight,
+    backgroundColor: colors.forest,
+    borderColor: colors.forestLight,
   },
   mountainCell: {
     backgroundColor: colors.mountain,

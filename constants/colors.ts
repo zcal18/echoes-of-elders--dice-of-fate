@@ -59,4 +59,18 @@ export default {
   health: '#EF4444',
   mana: '#3B82F6',
   experience: '#10B981',
+  
+  // Kingdom tile colors
+  water: '#1E40AF',
+  waterLight: '#3B82F6',
+  forest: '#059669',
+  forestLight: '#10B981',
+  mountain: '#6B7280',
+  mountainLight: '#9CA3AF',
+  desert: '#D97706',
+  desertLight: '#F59E0B',
+  castle: '#64748B',
+  castleLight: '#94A3B8',
+  royal: '#7C3AED',
+  royalLight: '#A855F7',
 };
