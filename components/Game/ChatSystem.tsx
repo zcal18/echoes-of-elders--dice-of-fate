@@ -163,8 +163,13 @@ export default function ChatSystem() {
           }
         };
         
-        ws.onerror = (error) => {
-          console.error('WebSocket error in ChatSystem:', error);
+        ws.onerror = (event) => {
+          console.error('WebSocket error in ChatSystem:', {
+            type: event.type,
+            target: event.target?.constructor?.name || 'Unknown',
+            readyState: (event.target as WebSocket)?.readyState,
+            url: (event.target as WebSocket)?.url
+          });
           setConnectionStatus('error');
           addNotification('Connection error. Retrying...', 'error');
         };
@@ -176,7 +181,11 @@ export default function ChatSystem() {
         };
         
         ws.onclose = (event) => {
-          console.log('WebSocket connection closed:', event.code, event.reason);
+          console.log('WebSocket connection closed:', {
+            code: event.code,
+            reason: event.reason,
+            wasClean: event.wasClean
+          });
           setConnectionStatus('disconnected');
           if (event.code !== 1000) {
             addNotification('Disconnected from chat', 'error');

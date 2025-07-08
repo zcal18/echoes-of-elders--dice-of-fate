@@ -1,89 +1,117 @@
 import { Enemy, Item } from '@/types/game';
 
-// Enhanced function to generate more accurate NPC images using multiple sources
+// Enhanced function to generate more accurate NPC images using better sources for fantasy creatures
 const generateNPCImageUrl = (enemyType: string, enemyName: string): string => {
   // Get current date as seed for daily updates
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
   const seed = today.replace(/-/g, ''); // Remove dashes for cleaner seed
   
   // Enhanced mapping with more specific and accurate search terms for fantasy creatures
+  // Using more reliable image sources for fantasy content
   const imageSearchTerms: { [key: string]: string } = {
     // Small Animals and Creatures
-    'cave_rat': 'large rat cave rodent dark fur red eyes',
-    'wild_boar': 'wild boar tusks forest brown fur aggressive',
-    'giant_spider': 'large black spider web fangs eight legs',
-    'dire_bat': 'large bat wings flying mammal dark cave',
-    'forest_wolf': 'grey wolf forest pack hunter yellow eyes',
-    'dire_wolf': 'large black wolf fierce predator',
-    'giant_centipede': 'large centipede many legs arthropod segmented',
+    'cave_rat': 'giant rat monster fantasy creature dark',
+    'wild_boar': 'wild boar fantasy beast tusks',
+    'giant_spider': 'giant spider fantasy monster arachnid',
+    'dire_bat': 'dire bat fantasy creature wings',
+    'forest_wolf': 'wolf fantasy beast predator',
+    'dire_wolf': 'dire wolf fantasy monster',
+    'giant_centipede': 'giant centipede fantasy monster insect',
     
     // Humanoid Creatures
-    'goblin_scout': 'green goblin small humanoid pointed ears fantasy',
-    'kobold_warrior': 'kobold reptilian humanoid scales spear warrior',
-    'bandit_thug': 'medieval bandit rogue leather armor human',
-    'bandit_thief': 'hooded thief dark cloak medieval criminal',
-    'orc_grunt': 'green orc warrior tusks muscular fantasy',
-    'orc_warrior': 'orc soldier armor axe green skin',
-    'hobgoblin_soldier': 'hobgoblin military armor disciplined warrior',
-    'bugbear_chief': 'large bugbear fur claws goblinoid leader',
-    'drow_assassin': 'dark elf purple skin white hair assassin',
-    'gnoll_hunter': 'gnoll hyena humanoid spotted fur hunter',
-    'lizardman_warrior': 'lizardfolk reptilian humanoid scales warrior',
-    'minotaur_guard': 'minotaur bull head horns muscular guardian',
+    'goblin_scout': 'goblin fantasy creature green humanoid',
+    'kobold_warrior': 'kobold fantasy reptilian warrior',
+    'bandit_thug': 'medieval bandit warrior human',
+    'bandit_thief': 'hooded thief medieval rogue',
+    'orc_grunt': 'orc fantasy warrior green',
+    'orc_warrior': 'orc soldier fantasy armor',
+    'hobgoblin_soldier': 'hobgoblin fantasy warrior',
+    'bugbear_chief': 'bugbear fantasy creature large',
+    'drow_assassin': 'dark elf fantasy assassin',
+    'gnoll_hunter': 'gnoll fantasy hyena humanoid',
+    'lizardman_warrior': 'lizardfolk fantasy reptilian warrior',
+    'minotaur_guard': 'minotaur fantasy bull humanoid',
     
     // Undead
-    'skeleton_warrior': 'skeleton bones armor sword undead warrior',
-    'skeleton_archer': 'skeleton bones bow arrow undead archer',
+    'skeleton_warrior': 'skeleton warrior fantasy undead',
+    'skeleton_archer': 'skeleton archer fantasy undead',
     
     // Constructs and Elementals
-    'stone_golem_small': 'stone golem rock construct animated guardian',
-    'stone_golem': 'large stone golem massive rock construct',
-    'earth_elemental_small': 'earth elemental rock dirt nature spirit',
-    'fire_elemental': 'fire elemental flames burning spirit energy',
+    'stone_golem_small': 'stone golem fantasy construct',
+    'stone_golem': 'stone golem fantasy guardian',
+    'earth_elemental_small': 'earth elemental fantasy nature',
+    'fire_elemental': 'fire elemental fantasy flame spirit',
     
     // Magical Creatures
-    'slime': 'green slime blob gelatinous ooze monster',
-    'mushroom_man': 'mushroom humanoid fungus forest spores',
-    'shadow_imp': 'small demon shadow dark wings horns',
-    'shadow_assassin': 'shadow figure dark assassin stealth',
-    'dark_mage': 'evil wizard dark robes staff magic',
+    'slime': 'slime monster fantasy blob',
+    'mushroom_man': 'mushroom humanoid fantasy fungus',
+    'shadow_imp': 'shadow imp fantasy demon',
+    'shadow_assassin': 'shadow assassin fantasy dark',
+    'dark_mage': 'dark wizard fantasy evil mage',
     
     // Larger Creatures
-    'owlbear': 'owlbear owl bear hybrid feathers claws',
-    'harpy': 'harpy bird woman wings feathers claws',
-    'phase_spider': 'ethereal spider magical translucent web',
-    'troll_scout': 'troll large green regeneration claws',
-    'troll_berserker': 'massive troll rage green skin claws',
+    'owlbear': 'owlbear fantasy creature owl bear',
+    'harpy': 'harpy fantasy bird woman',
+    'phase_spider': 'phase spider fantasy ethereal',
+    'troll_scout': 'troll fantasy large green',
+    'troll_berserker': 'troll berserker fantasy monster',
     
     // High-Level Creatures
-    'wyvern_young': 'young wyvern dragon wings tail stinger',
-    'dragon_whelp': 'small dragon scales wings fire breath',
-    'ancient_dragon': 'massive ancient dragon scales wings fire',
-    'lich_lord': 'lich undead wizard skull crown magic',
-    'demon_lord': 'demon lord horns wings fire evil'
+    'wyvern_young': 'young wyvern fantasy dragon',
+    'dragon_whelp': 'small dragon fantasy whelp',
+    'ancient_dragon': 'ancient dragon fantasy massive',
+    'lich_lord': 'lich fantasy undead wizard',
+    'demon_lord': 'demon lord fantasy evil'
   };
   
   // Get search term or fallback to enemy name
   const searchTerm = imageSearchTerms[enemyType] || enemyName.toLowerCase().replace(/\s+/g, ' ');
   
-  // Use multiple image sources for better variety and accuracy
+  // Use multiple image sources with better fantasy content
+  // Priority: Fantasy-specific sources, then general sources with fantasy terms
   const imageServices = [
-    // Unsplash for high-quality photos (works well for animals and some humanoids)
-    `https://source.unsplash.com/400x400/?${encodeURIComponent(searchTerm)}&sig=${seed}`,
-    // Picsum for variety (fallback)
-    `https://picsum.photos/400/400?random=${seed}${enemyType}`,
-    // Lorem Picsum with specific seed
-    `https://picsum.photos/seed/${seed}${enemyType}/400/400`
+    // DeviantArt-style fantasy art search (via search engines)
+    `https://source.unsplash.com/600x600/?${encodeURIComponent(searchTerm + ' fantasy art digital painting')}&sig=${seed}`,
+    // ArtStation-style fantasy concept art
+    `https://source.unsplash.com/600x600/?${encodeURIComponent(searchTerm + ' concept art fantasy')}&sig=${seed}1`,
+    // General fantasy creature search
+    `https://source.unsplash.com/600x600/?${encodeURIComponent(searchTerm + ' fantasy creature monster')}&sig=${seed}2`,
+    // Fallback to general search
+    `https://source.unsplash.com/600x600/?${encodeURIComponent(searchTerm)}&sig=${seed}3`,
+    // Final fallback with Picsum
+    `https://picsum.photos/seed/${seed}${enemyType}/600/600`
   ];
   
-  // For fantasy creatures, prioritize more specific terms
-  if (enemyType.includes('goblin') || enemyType.includes('orc') || enemyType.includes('dragon') || 
-      enemyType.includes('skeleton') || enemyType.includes('troll') || enemyType.includes('demon')) {
-    // Use more specific fantasy creature search
-    return `https://source.unsplash.com/400x400/?${encodeURIComponent(searchTerm + ' fantasy creature')}&sig=${seed}`;
+  // For specific creature types, use more targeted searches
+  if (enemyType.includes('dragon') || enemyType.includes('wyvern')) {
+    return `https://source.unsplash.com/600x600/?${encodeURIComponent('dragon fantasy art mythical creature')}&sig=${seed}`;
   }
   
-  // For animals, use the standard approach
+  if (enemyType.includes('goblin') || enemyType.includes('orc')) {
+    return `https://source.unsplash.com/600x600/?${encodeURIComponent('goblin orc fantasy creature green')}&sig=${seed}`;
+  }
+  
+  if (enemyType.includes('skeleton') || enemyType.includes('undead') || enemyType.includes('lich')) {
+    return `https://source.unsplash.com/600x600/?${encodeURIComponent('skeleton undead fantasy horror')}&sig=${seed}`;
+  }
+  
+  if (enemyType.includes('elemental') || enemyType.includes('golem')) {
+    return `https://source.unsplash.com/600x600/?${encodeURIComponent('elemental golem fantasy magic')}&sig=${seed}`;
+  }
+  
+  if (enemyType.includes('wolf') || enemyType.includes('boar') || enemyType.includes('bear')) {
+    return `https://source.unsplash.com/600x600/?${encodeURIComponent(searchTerm + ' wild animal beast')}&sig=${seed}`;
+  }
+  
+  if (enemyType.includes('spider') || enemyType.includes('centipede')) {
+    return `https://source.unsplash.com/600x600/?${encodeURIComponent('giant spider insect monster')}&sig=${seed}`;
+  }
+  
+  if (enemyType.includes('demon') || enemyType.includes('devil')) {
+    return `https://source.unsplash.com/600x600/?${encodeURIComponent('demon devil fantasy horror')}&sig=${seed}`;
+  }
+  
+  // Default to first service with enhanced search terms
   return imageServices[0];
 };
 

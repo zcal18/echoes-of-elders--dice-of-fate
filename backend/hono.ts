@@ -50,8 +50,8 @@ app.get("/ws", upgradeWebSocket((c) => {
                   message: `Successfully joined ${data.channelId}`
                 }));
               }
-            } catch (error) {
-              console.error('Error sending join confirmation:', error instanceof Error ? error.message : String(error));
+            } catch (sendError) {
+              console.error('Error sending join confirmation:', sendError instanceof Error ? sendError.message : String(sendError));
             }
             break;
             
@@ -192,8 +192,8 @@ app.get("/ws", upgradeWebSocket((c) => {
                   message: `Unknown message type: ${data.type}`
                 }));
               }
-            } catch (error) {
-              console.error('Error sending unknown type error:', error instanceof Error ? error.message : String(error));
+            } catch (sendError) {
+              console.error('Error sending unknown type error:', sendError instanceof Error ? sendError.message : String(sendError));
             }
         }
       } catch (error) {
@@ -244,7 +244,11 @@ app.get("/ws", upgradeWebSocket((c) => {
       }
     },
     onError: (event, ws) => {
-      console.error('WebSocket error occurred:', event);
+      console.error('WebSocket error occurred:', {
+        type: event.type,
+        target: event.target?.constructor?.name || 'Unknown',
+        timestamp: new Date().toISOString()
+      });
       
       // Send error notification to client if connection is still open
       try {

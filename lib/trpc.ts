@@ -107,7 +107,13 @@ export const connectWebSocket = (userId: string, userName: string, channelId: st
     };
     
     wsConnection.onerror = (event) => {
-      console.error('WebSocket connection error:', event);
+      console.error('WebSocket connection error:', {
+        type: event.type,
+        target: event.target?.constructor?.name || 'Unknown',
+        readyState: (event.target as WebSocket)?.readyState,
+        url: (event.target as WebSocket)?.url,
+        timestamp: new Date().toISOString()
+      });
       
       // Only attempt to reconnect if not manually disconnected and haven't exceeded max attempts
       if (!isManualDisconnect && reconnectAttempts < maxReconnectAttempts) {
@@ -134,7 +140,10 @@ export const connectWebSocket = (userId: string, userName: string, channelId: st
     
     return wsConnection;
   } catch (error) {
-    console.error('Failed to create WebSocket connection:', error);
+    console.error('Failed to create WebSocket connection:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
     
     // Schedule reconnect on connection creation failure
     if (!isManualDisconnect && reconnectAttempts < maxReconnectAttempts) {
@@ -175,7 +184,9 @@ export const disconnectWebSocket = (userId: string) => {
       console.log('Sending leave message:', leaveMessage);
       wsConnection.send(JSON.stringify(leaveMessage));
     } catch (error) {
-      console.error('Error sending leave message:', error);
+      console.error('Error sending leave message:', {
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
     
     wsConnection.close(1000, 'User disconnecting');
@@ -192,7 +203,10 @@ export const sendWebSocketMessage = (message: any) => {
       wsConnection.send(JSON.stringify(message));
       return true;
     } catch (error) {
-      console.error('Error sending WebSocket message:', error);
+      console.error('Error sending WebSocket message:', {
+        error: error instanceof Error ? error.message : String(error),
+        message
+      });
       return false;
     }
   } else {

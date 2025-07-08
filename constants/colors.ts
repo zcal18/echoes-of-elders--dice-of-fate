@@ -1,4 +1,4 @@
-export default {
+const colors = {
   // Primary colors
   primary: '#6366F1',
   primaryLight: '#818CF8',
@@ -17,35 +17,31 @@ export default {
   
   // Text colors
   text: '#F8FAFC',
-  textSecondary: '#94A3B8',
+  textSecondary: '#CBD5E1',
   textMuted: '#64748B',
   
   // Status colors
   success: '#10B981',
+  successLight: '#34D399',
+  successDark: '#059669',
+  
   error: '#EF4444',
-  errorLight: '#FCA5A5',
+  errorLight: '#F87171',
+  errorDark: '#DC2626',
+  
   warning: '#F59E0B',
+  warningLight: '#FCD34D',
+  warningDark: '#D97706',
+  
   info: '#3B82F6',
-  
-  // Utility colors
-  white: '#FFFFFF',
-  black: '#000000',
-  transparent: 'transparent',
-  
-  // Border colors
-  border: '#334155',
-  borderLight: '#475569',
-  borderDark: '#1E293B',
-  
-  // Additional semantic colors
-  accent: '#EC4899',
-  muted: '#6B7280',
-  destructive: '#DC2626',
+  infoLight: '#60A5FA',
+  infoDark: '#2563EB',
   
   // Game-specific colors
-  gold: '#FCD34D',
-  silver: '#E5E7EB',
-  bronze: '#D97706',
+  health: '#EF4444',
+  mana: '#3B82F6',
+  experience: '#10B981',
+  gold: '#F59E0B',
   
   // Rarity colors
   common: '#9CA3AF',
@@ -55,22 +51,10 @@ export default {
   legendary: '#F59E0B',
   mythic: '#EF4444',
   
-  // Character stat colors
-  health: '#EF4444',
-  mana: '#3B82F6',
-  experience: '#10B981',
-  
-  // Kingdom tile colors
-  water: '#1E40AF',
-  waterLight: '#3B82F6',
-  forest: '#059669',
-  forestLight: '#10B981',
-  mountain: '#6B7280',
-  mountainLight: '#9CA3AF',
-  desert: '#D97706',
-  desertLight: '#F59E0B',
-  castle: '#64748B',
-  castleLight: '#94A3B8',
-  royal: '#7C3AED',
-  royalLight: '#A855F7',
+  // Transparent overlays
+  overlay: 'rgba(0, 0, 0, 0.5)',
+  overlayLight: 'rgba(0, 0, 0, 0.3)',
+  overlayDark: 'rgba(0, 0, 0, 0.7)',
 };
+
+export default colors;
