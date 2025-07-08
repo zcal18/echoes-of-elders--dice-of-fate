@@ -108,8 +108,20 @@ export default function HomeScreen() {
       mana: activeCharacter.mana,
       stats: activeCharacter.stats,
       isPlayer: true,
-      buffs: activeCharacter.buffs || [],
-      debuffs: activeCharacter.debuffs || [],
+      // Convert Buff objects to expected format
+      buffs: (activeCharacter.buffs || []).map(buff => ({
+        name: buff.name,
+        effect: buff.description || 'Buff effect',
+        duration: buff.duration,
+        type: 'magic' as const // Default type, could be enhanced based on buff properties
+      })),
+      // Convert Debuff objects to expected format
+      debuffs: (activeCharacter.debuffs || []).map(debuff => ({
+        name: debuff.name,
+        effect: debuff.description || 'Debuff effect',
+        duration: debuff.duration,
+        type: 'curse' as const // Default type, could be enhanced based on debuff properties
+      })),
       profileImage: activeCharacter.profileImage,
       customRace: activeCharacter.customRace,
       customClass: activeCharacter.customClass,
@@ -128,11 +140,6 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <NotificationSystem />
-      <Stack.Screen 
-        options={{
-          title: 'Home',
-        }}
-      />
       
       <ScrollView contentContainerStyle={styles.content}>
         {/* Character Header */}

@@ -163,7 +163,10 @@ export default function ChatSystem() {
         
         ws.onerror = (error) => {
           console.error('WebSocket error in ChatSystem:', error);
-          addNotification('Connection error. Retrying...', 'error');
+          // Only show notification for actual connection errors, not generic events
+          if (error && typeof error === 'object' && 'message' in error) {
+            addNotification('Connection error. Retrying...', 'error');
+          }
         };
         
         ws.onopen = () => {
@@ -997,10 +1000,10 @@ const styles = StyleSheet.create({
   },
   messageList: {
     flex: 1,
-    padding: 8,
+    padding: 4,
   },
   desktopMessageList: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
   },
   noMessagesContainer: {
     flex: 1,
@@ -1066,10 +1069,10 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   messageContainer: {
-    padding: 8,
+    padding: 6,
     borderRadius: 8,
     backgroundColor: colors.surface,
-    marginBottom: 6,
+    marginBottom: 4,
     width: '100%',
   },
   messageHeader: {
@@ -1135,7 +1138,7 @@ const styles = StyleSheet.create({
   // Input Container Styles
   inputContainer: {
     flexDirection: 'row',
-    padding: 8,
+    padding: 4,
     gap: 6,
     borderTopWidth: 1,
     borderTopColor: colors.surfaceLight,
@@ -1143,11 +1146,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   desktopInputContainer: {
-    padding: 12,
+    padding: 8,
     gap: 12,
   },
   desktopInputContainerWide: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     gap: 16,
   },
   inlineInputControls: {
@@ -1174,7 +1177,7 @@ const styles = StyleSheet.create({
   },
   compactInput: {
     flex: 1,
-    padding: 8,
+    padding: 6,
     borderRadius: 6,
     backgroundColor: colors.background,
     color: colors.text,
@@ -1185,7 +1188,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   desktopInput: {
-    padding: 12,
+    padding: 8,
     borderRadius: 8,
     maxHeight: 80,
     minHeight: 40,
@@ -1194,7 +1197,7 @@ const styles = StyleSheet.create({
   desktopInputWide: {
     minHeight: 44,
     fontSize: 16,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
   },
   compactSendButton: {
     backgroundColor: colors.primary,
