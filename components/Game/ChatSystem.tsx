@@ -44,6 +44,7 @@ export default function ChatSystem() {
     userRole,
     chatPopout,
     onlineUsers,
+    isAuthenticated,
     setActiveChannel,
     addChatMessage,
     createChatLobby,
@@ -56,7 +57,8 @@ export default function ChatSystem() {
     setChatPopout,
     connectToChat,
     disconnectFromChat,
-    updateUserPresence
+    updateUserPresence,
+    addNotification
   } = useGameStore();
   
   const [message, setMessage] = useState("");
@@ -70,7 +72,7 @@ export default function ChatSystem() {
   const [membersSidebarVisible, setMembersSidebarVisible] = useState(false);
   const [selectedColor, setSelectedColor] = useState(TEXT_COLORS[0].value);
   const [isEmoteMode, setIsEmoteMode] = useState(false);
-  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<string>('disconnected');
   
   const scrollViewRef = useRef<ScrollView>(null);
   const textInputRef = useRef<TextInput>(null);
@@ -82,20 +84,44 @@ export default function ChatSystem() {
   const leaveChannelMutation = trpc.chat.leaveChannel.useMutation();
   const createChannelMutation = trpc.chat.createChannel.useMutation();
   
+  // Early return if not authenticated
+  if (!isAuthenticated || !activeCharacter) {
+    return (
+      <View style={styles.unauthenticatedContainer}>
+        <Text style={styles.unauthenticatedText}>Please log in to access chat</Text>
+      </View>
+    );
+  }
+  
   const activeLobby: ChatLobby | undefined = chatLobbies.find((lobby: ChatLobby) => lobby.id === activeChannel);
   const currentMembers = activeLobby?.members || [];
   const onlineMembersInChannel = onlineUsers.filter((user: OnlineUser) => 
     currentMembers.includes(user.id) && user.channelId === activeChannel
   );
   
-  // Connect to WebSocket when component mounts
+  // Monitor connection status
   useEffect(() => {
-    if (activeCharacter && Platform.OS === 'web') {
+    const updateStatus = () => {
+      const status = getWebSocketStatus();
+      setConnectionStatus(status);
+    };
+    
+    updateStatus();
+    const interval = setInterval(updateStatus, 1000);
+    return () => clearInterval(interval);
+  }, []);
+  
+  // Connect to WebSocket when component mounts and user is authenticated
+  useEffect(() => {
+    if (activeCharacter && isAuthenticated && Platform.OS === 'web') {
+      console.log('Connecting to WebSocket for user:', activeCharacter.name);
+      
       const ws = connectWebSocket(activeCharacter.id, activeCharacter.name, activeChannel);
       if (ws) {
         ws.onmessage = (event) => {
           try {
-            const data = JSON.parse(event.data);
+            const data = JSON.parse(event.data.toString());
+            console.log('Received WebSocket message:', data);
             
             switch (data.type) {
               case 'message':
@@ -103,18 +129,19 @@ export default function ChatSystem() {
                 break;
               case 'userJoined':
                 updateUserPresence(data.userId, true, activeChannel);
+                addNotification(`${data.userName} joined the channel`, 'info');
                 break;
               case 'userLeft':
                 updateUserPresence(data.userId, false);
                 break;
               case 'error':
-                setSubscriptionError(data.message);
+                console.error('WebSocket error from server:', data.message);
                 break;
               case 'pvpMatchFound':
-                // Handle PVP match found
+                addNotification('PVP match found!', 'success');
                 break;
               case 'guildBattleInitiated':
-                // Handle guild battle initiated
+                addNotification('Guild battle initiated!', 'info');
                 break;
               default:
                 console.log('Unknown WebSocket message type:', data.type);
@@ -126,18 +153,17 @@ export default function ChatSystem() {
         
         ws.onerror = (error) => {
           console.error('WebSocket error in ChatSystem:', error);
-          setSubscriptionError(null); // Don't show error to user
         };
         
         ws.onopen = () => {
-          setSubscriptionError(null);
+          console.log('WebSocket connected successfully');
+          setConnectionStatus('connected');
         };
         
-        ws.onclose = () => {
-          // Connection closed
+        ws.onclose = (event) => {
+          console.log('WebSocket connection closed:', event.code, event.reason);
+          setConnectionStatus('disconnected');
         };
-      } else {
-        setSubscriptionError(null); // Don't show error to user
       }
       
       connectToChat(activeCharacter.id, activeCharacter.name);
@@ -149,11 +175,13 @@ export default function ChatSystem() {
         disconnectFromChat(activeCharacter.id);
       }
     };
-  }, [activeCharacter]);
+  }, [activeCharacter, isAuthenticated]);
 
   // Join channel when active channel changes
   useEffect(() => {
-    if (activeCharacter && activeChannel) {
+    if (activeCharacter && activeChannel && isAuthenticated) {
+      console.log('Joining channel:', activeChannel);
+      
       joinChannelMutation.mutate({
         channelId: activeChannel,
         userId: activeCharacter.id,
@@ -162,14 +190,18 @@ export default function ChatSystem() {
       
       // Send WebSocket message to switch channel
       if (Platform.OS === 'web') {
-        sendWebSocketMessage({
+        const success = sendWebSocketMessage({
           type: 'switchChannel',
           userId: activeCharacter.id,
           channelId: activeChannel
         });
+        
+        if (!success) {
+          console.warn('Failed to send channel switch message via WebSocket');
+        }
       }
     }
-  }, [activeChannel, activeCharacter]);
+  }, [activeChannel, activeCharacter, isAuthenticated]);
   
   useEffect(() => {
     Animated.timing(sidebarAnimation, {
@@ -197,7 +229,7 @@ export default function ChatSystem() {
   }, [activeLobby?.messages]);
   
   const handleSend = async () => {
-    if (!message.trim() || !activeCharacter) return;
+    if (!message.trim() || !activeCharacter || !isAuthenticated) return;
     
     const messageType: 'normal' | 'emote' = isEmoteMode ? 'emote' : 'normal';
     
@@ -211,22 +243,29 @@ export default function ChatSystem() {
     };
 
     try {
+      console.log('Sending message:', messageData);
       const result = await sendMessageMutation.mutateAsync(messageData);
       
-      // Send via WebSocket for real-time delivery
+      // Create message object for local display and WebSocket
+      const chatMessage: ChatMessage = {
+        id: result.id,
+        content: message.trim(),
+        sender: activeCharacter.name,
+        timestamp: Date.now(),
+        reactions: [],
+        fontColor: selectedColor !== TEXT_COLORS[0].value ? selectedColor : undefined,
+        messageType
+      };
+      
+      // Add to local state immediately for better UX
+      addChatMessage(chatMessage);
+      
+      // Send via WebSocket for real-time delivery to other users
       if (Platform.OS === 'web') {
         const success = sendWebSocketMessage({
           type: 'message',
           channelId: activeChannel,
-          message: {
-            id: result.id,
-            content: message.trim(),
-            sender: activeCharacter.name,
-            timestamp: Date.now(),
-            reactions: [],
-            fontColor: selectedColor !== TEXT_COLORS[0].value ? selectedColor : undefined,
-            messageType
-          }
+          message: chatMessage
         });
         
         if (!success) {
@@ -237,17 +276,7 @@ export default function ChatSystem() {
       setMessage("");
     } catch (error) {
       console.error('Failed to send message:', error);
-      // Fallback to local message if network fails
-      addChatMessage({
-        id: Date.now().toString(),
-        content: message.trim(),
-        sender: activeCharacter.name,
-        timestamp: Date.now(),
-        reactions: [],
-        fontColor: selectedColor !== TEXT_COLORS[0].value ? selectedColor : undefined,
-        messageType
-      });
-      setMessage("");
+      addNotification('Failed to send message', 'error');
     }
   };
 
@@ -278,7 +307,7 @@ export default function ChatSystem() {
   };
   
   const handleCreateRoom = async () => {
-    if (!newRoomName.trim() || !activeCharacter) return;
+    if (!newRoomName.trim() || !activeCharacter || !isAuthenticated) return;
     
     try {
       await createChannelMutation.mutateAsync({
@@ -298,8 +327,11 @@ export default function ChatSystem() {
       setNewRoomName("");
       setNewRoomDescription("");
       setIsPrivate(false);
+      
+      addNotification(`Channel "${newRoomName.trim()}" created successfully!`, 'success');
     } catch (error) {
       console.error('Failed to create channel:', error);
+      addNotification('Failed to create channel', 'error');
     }
   };
   
@@ -494,10 +526,9 @@ export default function ChatSystem() {
           styles.chatArea,
           Platform.OS === 'web' && !isMobile && sidebarVisible && { marginLeft: SIDEBAR_WIDTH },
           Platform.OS === 'web' && !isMobile && membersSidebarVisible && { marginRight: SIDEBAR_WIDTH },
-          // Enhanced width utilization for desktop
           isDesktop && styles.desktopChatArea
         ]}>
-          {/* Chat Header - Simplified */}
+          {/* Chat Header */}
           <View style={styles.chatHeader}>
             {(isMobile || Platform.OS !== 'web') && (
               <TouchableOpacity 
@@ -508,6 +539,9 @@ export default function ChatSystem() {
               </TouchableOpacity>
             )}
             <View style={styles.chatHeaderContent}>
+              <Text style={styles.chatHeaderTitle}>
+                {activeLobby?.name || 'Chat'}
+              </Text>
               {activeLobby?.description && (
                 <Text style={styles.chatHeaderDescription}>
                   {activeLobby.description}
@@ -515,6 +549,12 @@ export default function ChatSystem() {
               )}
             </View>
             <View style={styles.headerButtons}>
+              {/* Connection Status Indicator */}
+              <View style={[
+                styles.connectionIndicator,
+                { backgroundColor: connectionStatus === 'connected' ? colors.success : colors.error }
+              ]} />
+              
               <TouchableOpacity 
                 style={styles.headerButton}
                 onPress={toggleMembersSidebar}
@@ -524,14 +564,7 @@ export default function ChatSystem() {
                   {onlineMembersInChannel.length}
                 </Text>
               </TouchableOpacity>
-              {chatPopout && Platform.OS === 'web' && (
-                <TouchableOpacity 
-                  style={styles.headerButton}
-                  onPress={() => setChatPopout(false)}
-                >
-                  <Minimize2 size={20} color={colors.text} />
-                </TouchableOpacity>
-              )}
+              
               {Platform.OS === 'web' && (
                 <TouchableOpacity 
                   style={styles.headerButton}
@@ -550,13 +583,18 @@ export default function ChatSystem() {
             onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
             showsVerticalScrollIndicator={false}
           >
-            {activeLobby?.messages.map((msg, index) => {
-              const renderedMessage = renderMessage(msg, index);
-              return renderedMessage;
-            }).filter(Boolean)}
+            {activeLobby?.messages && activeLobby.messages.length > 0 ? (
+              activeLobby.messages.map((msg, index) => renderMessage(msg, index))
+            ) : (
+              <View style={styles.noMessagesContainer}>
+                <Text style={styles.noMessagesText}>
+                  No messages yet. Start the conversation!
+                </Text>
+              </View>
+            )}
           </ScrollView>
           
-          {/* Enhanced Input Container for Desktop/Mobile */}
+          {/* Input Container */}
           <View style={[
             styles.inputContainer,
             Platform.OS === 'web' && !isMobile && styles.desktopInputContainer,
@@ -808,6 +846,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: colors.background,
   },
+  unauthenticatedContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+  },
+  unauthenticatedText: {
+    fontSize: 18,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
   popoutContainer: {
     position: 'absolute',
     top: 50,
@@ -880,14 +929,13 @@ const styles = StyleSheet.create({
     display: 'flex',
     flexDirection: 'column',
   },
-  // Enhanced desktop chat area for wider layout
   desktopChatArea: {
-    minWidth: 600, // Ensure minimum width for desktop
+    minWidth: 600,
   },
   chatHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: 8,
     borderBottomWidth: 1,
     borderBottomColor: colors.surfaceLight,
     backgroundColor: colors.surface,
@@ -898,6 +946,11 @@ const styles = StyleSheet.create({
   chatHeaderContent: {
     flex: 1,
   },
+  chatHeaderTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
   chatHeaderDescription: {
     fontSize: 14,
     color: colors.textSecondary,
@@ -905,7 +958,14 @@ const styles = StyleSheet.create({
   },
   headerButtons: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
+  },
+  connectionIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 4,
   },
   headerButton: {
     flexDirection: 'row',
@@ -922,11 +982,21 @@ const styles = StyleSheet.create({
   },
   messageList: {
     flex: 1,
-    padding: 8,
+    padding: 4,
   },
-  // Enhanced desktop message list for wider content
   desktopMessageList: {
-    paddingHorizontal: 12, // Reduced padding for desktop
+    paddingHorizontal: 8,
+  },
+  noMessagesContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  noMessagesText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
   membersPanel: {
     borderLeftWidth: 1,
@@ -985,7 +1055,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: colors.surface,
     marginBottom: 6,
-    // Enhanced width utilization for messages
     width: '100%',
   },
   messageHeader: {
@@ -1048,10 +1117,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   
-  // Enhanced Input Container Styles
+  // Input Container Styles
   inputContainer: {
     flexDirection: 'row',
-    padding: 6,
+    padding: 4,
     gap: 6,
     borderTopWidth: 1,
     borderTopColor: colors.surfaceLight,
@@ -1059,12 +1128,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   desktopInputContainer: {
-    padding: 8,
+    padding: 6,
     gap: 12,
   },
-  // Enhanced desktop input container for wider layout
   desktopInputContainerWide: {
-    paddingHorizontal: 12, // Reduced padding for desktop
+    paddingHorizontal: 8,
     gap: 16,
   },
   inlineInputControls: {
@@ -1108,7 +1176,6 @@ const styles = StyleSheet.create({
     minHeight: 40,
     fontSize: 16,
   },
-  // Enhanced desktop input for wider layout
   desktopInputWide: {
     minHeight: 44,
     fontSize: 16,

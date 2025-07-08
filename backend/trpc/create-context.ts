@@ -4,20 +4,34 @@ import superjson from "superjson";
 
 // Context creation function
 export const createContext = async (opts: FetchCreateContextFnOptions) => {
+  // Extract user information from headers if available
+  const authHeader = opts.req.headers.get('authorization');
+  const userId = opts.req.headers.get('x-user-id');
+  const userName = opts.req.headers.get('x-user-name');
+  
   return {
     req: opts.req,
+    // Add authentication context
+    user: userId ? {
+      id: userId,
+      name: userName || 'Unknown',
+      isAuthenticated: true
+    } : null,
     // Add WebSocket context if needed
-    ws: null, // This would be populated in WebSocket connections
-    // You can add more context items here like database connections, auth, etc.
+    ws: null,
   };
 };
 
 // WebSocket context creation function
-export const createWSContext = async (opts: { ws?: any }) => {
+export const createWSContext = async (opts: { ws?: any; userId?: string; userName?: string }) => {
   return {
     req: null,
     ws: opts.ws || null,
-    // Add WebSocket-specific context
+    user: opts.userId ? {
+      id: opts.userId,
+      name: opts.userName || 'Unknown',
+      isAuthenticated: true
+    } : null,
   };
 };
 
@@ -34,11 +48,15 @@ export const publicProcedure = t.procedure;
 
 // Protected procedure for authenticated users
 export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
-  // Add authentication logic here if needed
+  // Check if user is authenticated
+  if (!ctx.user?.isAuthenticated) {
+    throw new Error('Unauthorized: Please log in to access this feature');
+  }
+  
   return next({
     ctx: {
       ...ctx,
-      // Add user context
+      user: ctx.user, // Ensure user is available in protected procedures
     },
   });
 });

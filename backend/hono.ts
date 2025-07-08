@@ -22,41 +22,77 @@ app.get("/ws", upgradeWebSocket((c) => {
     onMessage: (event, ws) => {
       try {
         const data = JSON.parse(event.data.toString());
+        console.log('WebSocket message received:', data);
         
         switch (data.type) {
           case 'join':
+            console.log(`User ${data.userName} (${data.userId}) joining channel ${data.channelId}`);
             connectedClients.set(data.userId, ws);
             userChannels.set(data.userId, data.channelId);
             
-            // Broadcast user joined
+            // Broadcast user joined to channel
             broadcastToChannel(data.channelId, {
               type: 'userJoined',
               userId: data.userId,
               userName: data.userName
-            });
+            }, data.userId);
+            
+            // Send confirmation to user
+            try {
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                  type: 'joinConfirmed',
+                  channelId: data.channelId,
+                  message: `Successfully joined ${data.channelId}`
+                }));
+              }
+            } catch (error) {
+              console.error('Error sending join confirmation:', error);
+            }
             break;
             
           case 'leave':
+            console.log(`User ${data.userId} leaving`);
+            const userChannel = userChannels.get(data.userId);
             connectedClients.delete(data.userId);
             userChannels.delete(data.userId);
             
-            // Broadcast user left
-            broadcastToChannel(data.channelId, {
-              type: 'userLeft',
-              userId: data.userId
-            });
+            // Broadcast user left to their channel
+            if (userChannel) {
+              broadcastToChannel(userChannel, {
+                type: 'userLeft',
+                userId: data.userId
+              }, data.userId);
+            }
             break;
             
           case 'message':
-            // Broadcast message to all users in the channel
+            console.log(`Broadcasting message from ${data.message.sender} to channel ${data.channelId}`);
+            // Broadcast message to all users in the channel except sender
             broadcastToChannel(data.channelId, {
               type: 'message',
               message: data.message
-            });
+            }, data.message.senderId || data.message.sender);
             break;
             
           case 'switchChannel':
+            console.log(`User ${data.userId} switching to channel ${data.channelId}`);
+            const oldChannel = userChannels.get(data.userId);
             userChannels.set(data.userId, data.channelId);
+            
+            // Notify old channel that user left
+            if (oldChannel && oldChannel !== data.channelId) {
+              broadcastToChannel(oldChannel, {
+                type: 'userLeft',
+                userId: data.userId
+              }, data.userId);
+            }
+            
+            // Notify new channel that user joined
+            broadcastToChannel(data.channelId, {
+              type: 'userJoined',
+              userId: data.userId
+            }, data.userId);
             break;
 
           // PVP Queue Management
@@ -144,6 +180,17 @@ app.get("/ws", upgradeWebSocket((c) => {
             
           default:
             console.log('Unknown WebSocket message type:', data.type);
+            // Send error back to client
+            try {
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                  type: 'error',
+                  message: `Unknown message type: ${data.type}`
+                }));
+              }
+            } catch (error) {
+              console.error('Error sending unknown type error:', error);
+            }
         }
       } catch (error) {
         console.error('WebSocket message processing error:', {
@@ -154,10 +201,12 @@ app.get("/ws", upgradeWebSocket((c) => {
         
         // Send error back to client
         try {
-          ws.send(JSON.stringify({
-            type: 'error',
-            message: 'Failed to process message'
-          }));
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+              type: 'error',
+              message: 'Failed to process message'
+            }));
+          }
         } catch (sendError) {
           console.error('Failed to send error message:', sendError);
         }
@@ -174,6 +223,8 @@ app.get("/ws", upgradeWebSocket((c) => {
       for (const [userId, client] of connectedClients.entries()) {
         if (client === ws) {
           const channelId = userChannels.get(userId);
+          console.log(`Cleaning up disconnected user ${userId} from channel ${channelId}`);
+          
           connectedClients.delete(userId);
           userChannels.delete(userId);
           pvpQueue.delete(userId);
@@ -182,19 +233,14 @@ app.get("/ws", upgradeWebSocket((c) => {
             broadcastToChannel(channelId, {
               type: 'userLeft',
               userId
-            });
+            }, userId);
           }
           break;
         }
       }
     },
     onError: (event, ws) => {
-      console.error('WebSocket error occurred:', {
-        type: event.type,
-        target: event.target ? 'WebSocket' : 'Unknown',
-        timeStamp: event.timeStamp,
-        message: event.message || 'Unknown error'
-      });
+      console.error('WebSocket error occurred:', event);
       
       // Send error notification to client if connection is still open
       try {
@@ -211,50 +257,64 @@ app.get("/ws", upgradeWebSocket((c) => {
   };
 }));
 
-function broadcastToChannel(channelId: string, message: any) {
+function broadcastToChannel(channelId: string, message: any, excludeUserId?: string) {
+  console.log(`Broadcasting to channel ${channelId}:`, message, `(excluding ${excludeUserId})`);
+  let broadcastCount = 0;
+  
   for (const [userId, ws] of connectedClients.entries()) {
     const userChannelId = userChannels.get(userId);
-    if (userChannelId === channelId) {
+    if (userChannelId === channelId && userId !== excludeUserId) {
       try {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify(message));
+          broadcastCount++;
         } else {
           // Remove dead connection
+          console.log(`Removing dead connection for user ${userId}`);
           connectedClients.delete(userId);
           userChannels.delete(userId);
         }
       } catch (error) {
-        console.error('Error broadcasting to channel:', error);
+        console.error(`Error broadcasting to user ${userId}:`, error);
         // Remove dead connection
         connectedClients.delete(userId);
         userChannels.delete(userId);
       }
     }
   }
+  
+  console.log(`Broadcast sent to ${broadcastCount} users in channel ${channelId}`);
 }
 
 function broadcastToAll(message: any) {
+  console.log('Broadcasting to all users:', message);
+  let broadcastCount = 0;
+  
   for (const [userId, ws] of connectedClients.entries()) {
     try {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify(message));
+        broadcastCount++;
       } else {
         // Remove dead connection
+        console.log(`Removing dead connection for user ${userId}`);
         connectedClients.delete(userId);
         userChannels.delete(userId);
       }
     } catch (error) {
-      console.error('Error broadcasting to all:', error);
+      console.error(`Error broadcasting to user ${userId}:`, error);
       // Remove dead connection
       connectedClients.delete(userId);
       userChannels.delete(userId);
     }
   }
+  
+  console.log(`Broadcast sent to ${broadcastCount} users`);
 }
 
 function broadcastToGuild(guildId: string, message: any) {
   // This would need guild member lookup in a real implementation
-  // For now, broadcast to all connected users
+  // For now, broadcast to all connected users with guild context
   broadcastToAll({
     ...message,
     guildId
@@ -395,7 +455,12 @@ app.use(
 
 // Simple health check endpoint
 app.get("/", (c) => {
-  return c.json({ status: "ok", message: "API is running" });
+  return c.json({ 
+    status: "ok", 
+    message: "API is running",
+    connectedUsers: connectedClients.size,
+    activeChannels: new Set(userChannels.values()).size
+  });
 });
 
 export default app;

@@ -407,7 +407,13 @@ export const useGameStore = create<GameState>()(
       
       // Character Functions
       createCharacter: (characterInput: CreateCharacterInput) => {
-        const { characters } = get();
+        const { characters, isAuthenticated } = get();
+        
+        // Check authentication first
+        if (!isAuthenticated) {
+          get().addNotification('Please log in to create a character', 'error');
+          return;
+        }
         
         // Check if user already has 3 characters
         if (characters.length >= 3) {
@@ -575,7 +581,9 @@ export const useGameStore = create<GameState>()(
               sender: "Generous Lord",
               recipient: newCharacter.name,
               subject: "Welcome to the Realm",
-              message: "Greetings, brave soul. Welcome to this realm of adventure and danger. As a token of my generosity, I bestow upon you 500 gold to aid in your journey. But beware, not everything comes without cost. A time may come when a debt is owed. Tread carefully.\n\n- A Generous Lord",
+              message: "Greetings, brave soul. Welcome to this realm of adventure and danger. As a token of my generosity, I bestow upon you 500 gold to aid in your journey. But beware, not everything comes without cost. A time may come when a debt is owed. Tread carefully.
+
+- A Generous Lord",
               timestamp: Date.now(),
               isRead: false,
               isStarred: false
@@ -613,7 +621,13 @@ export const useGameStore = create<GameState>()(
       },
       
       deleteCharacter: (characterId: string) => {
-        const { characters, activeCharacter } = get();
+        const { characters, activeCharacter, isAuthenticated } = get();
+        
+        if (!isAuthenticated) {
+          get().addNotification('Please log in to delete characters', 'error');
+          return;
+        }
+        
         const characterToDelete = characters.find(c => c.id === characterId);
         
         if (!characterToDelete) {
@@ -639,6 +653,13 @@ export const useGameStore = create<GameState>()(
       },
       
       selectCharacter: (characterId: string) => {
+        const { isAuthenticated } = get();
+        
+        if (!isAuthenticated) {
+          get().addNotification('Please log in to select a character', 'error');
+          return;
+        }
+        
         const character = get().characters.find((c: Character) => c.id === characterId);
         if (character) {
           // Ensure inventory exists when selecting a character
@@ -665,6 +686,13 @@ export const useGameStore = create<GameState>()(
       },
       
       updateCharacterProfileImage: (characterId: string, imageUrl: string) => {
+        const { isAuthenticated } = get();
+        
+        if (!isAuthenticated) {
+          get().addNotification('Please log in to update character profile', 'error');
+          return;
+        }
+        
         set((state: GameState) => ({
           characters: state.characters.map((c: Character) =>
             c.id === characterId ? { ...c, profileImage: imageUrl } : c
@@ -676,8 +704,8 @@ export const useGameStore = create<GameState>()(
       },
       
       addExperience: (amount: number) => {
-        const { activeCharacter } = get();
-        if (!activeCharacter) return;
+        const { activeCharacter, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) return;
         
         set((state: GameState) => ({
           characters: state.characters.map((c: Character) =>
@@ -688,8 +716,8 @@ export const useGameStore = create<GameState>()(
       },
       
       gainExperience: (amount: number) => {
-        const { activeCharacter } = get();
-        if (!activeCharacter) return;
+        const { activeCharacter, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) return;
         
         const newExperience = activeCharacter.experience + amount;
         let newLevel = activeCharacter.level;
@@ -747,8 +775,8 @@ export const useGameStore = create<GameState>()(
       },
       
       addGold: (amount: number) => {
-        const { activeCharacter } = get();
-        if (!activeCharacter) return;
+        const { activeCharacter, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) return;
         
         set((state: GameState) => ({
           characters: state.characters.map((c: Character) =>
@@ -759,8 +787,8 @@ export const useGameStore = create<GameState>()(
       },
       
       gainGold: (amount: number) => {
-        const { activeCharacter } = get();
-        if (!activeCharacter) return;
+        const { activeCharacter, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) return;
         
         set((state: GameState) => ({
           characters: state.characters.map((c: Character) =>
@@ -771,14 +799,17 @@ export const useGameStore = create<GameState>()(
       },
       
       gainDiamonds: (amount: number) => {
+        const { isAuthenticated } = get();
+        if (!isAuthenticated) return;
+        
         set((state: GameState) => ({
           diamonds: state.diamonds + amount
         }));
       },
       
       spendGold: (amount: number) => {
-        const { activeCharacter } = get();
-        if (!activeCharacter || activeCharacter.gold < amount) return false;
+        const { activeCharacter, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated || activeCharacter.gold < amount) return false;
         
         set((state: GameState) => ({
           characters: state.characters.map((c: Character) =>
@@ -791,8 +822,8 @@ export const useGameStore = create<GameState>()(
       },
       
       updateCharacterHealth: (characterId: string, newHealth: number) => {
-        const { activeCharacter } = get();
-        if (!activeCharacter || activeCharacter.id !== characterId) return;
+        const { activeCharacter, isAuthenticated } = get();
+        if (!activeCharacter || activeCharacter.id !== characterId || !isAuthenticated) return;
         
         // Ensure health doesn't exceed max
         const clampedHealth = Math.min(newHealth, activeCharacter.health.max);
@@ -815,6 +846,9 @@ export const useGameStore = create<GameState>()(
       
       // Territory Functions
       claimTerritory: (territoryId: string, guildId: string) => {
+        const { isAuthenticated } = get();
+        if (!isAuthenticated) return;
+        
         set((state: GameState) => ({
           territories: state.territories.map(territory =>
             territory.id === territoryId
@@ -825,6 +859,9 @@ export const useGameStore = create<GameState>()(
       },
       
       unlockRoyalSpire: () => {
+        const { isAuthenticated } = get();
+        if (!isAuthenticated) return;
+        
         set((state: GameState) => ({
           territories: state.territories.map(territory =>
             territory.isRoyalSpire
@@ -836,8 +873,8 @@ export const useGameStore = create<GameState>()(
       
       // Guild Battle Functions
       initiateGuildBattle: (territoryId: string, attackingGuildId: string) => {
-        const { territories, guilds, activeCharacter } = get();
-        if (!activeCharacter) return;
+        const { territories, guilds, activeCharacter, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) return;
         
         const territory = territories.find(t => t.id === territoryId);
         const attackingGuild = guilds.find(g => g.id === attackingGuildId);
@@ -868,8 +905,8 @@ export const useGameStore = create<GameState>()(
       },
       
       joinGuildBattle: (battleId: string, side: 'attacker' | 'defender') => {
-        const { activeCharacter, guildBattles } = get();
-        if (!activeCharacter) return;
+        const { activeCharacter, guildBattles, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) return;
         
         set((state: GameState) => ({
           guildBattles: state.guildBattles.map(battle => {
@@ -886,6 +923,9 @@ export const useGameStore = create<GameState>()(
       },
       
       startGuildBattle: (battleId: string) => {
+        const { isAuthenticated } = get();
+        if (!isAuthenticated) return;
+        
         set((state: GameState) => ({
           guildBattles: state.guildBattles.map(battle =>
             battle.id === battleId
@@ -898,8 +938,8 @@ export const useGameStore = create<GameState>()(
       
       // Inventory Functions
       addItem: (item: Item) => {
-        const { activeCharacter } = get();
-        if (!activeCharacter) return;
+        const { activeCharacter, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) return;
         
         // Ensure inventory exists
         const inventory = activeCharacter.inventory || [];
@@ -913,8 +953,8 @@ export const useGameStore = create<GameState>()(
       },
       
       removeItem: (itemId: string) => {
-        const { activeCharacter } = get();
-        if (!activeCharacter) return;
+        const { activeCharacter, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) return;
         
         // Ensure inventory exists
         const inventory = activeCharacter.inventory || [];
@@ -933,8 +973,8 @@ export const useGameStore = create<GameState>()(
       },
       
       equipItem: (itemId: string, slot?: string) => {
-        const { activeCharacter } = get();
-        if (!activeCharacter) return;
+        const { activeCharacter, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) return;
         
         // Ensure inventory exists
         const inventory = activeCharacter.inventory || [];
@@ -1023,8 +1063,8 @@ export const useGameStore = create<GameState>()(
       },
       
       unequipItem: (slot: string) => {
-        const { activeCharacter } = get();
-        if (!activeCharacter) return;
+        const { activeCharacter, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) return;
         
         const equipment = activeCharacter.equipment || {};
         const item = equipment[slot];
@@ -1057,8 +1097,8 @@ export const useGameStore = create<GameState>()(
       },
       
       useItem: (itemId: string) => {
-        const { activeCharacter } = get();
-        if (!activeCharacter) return false;
+        const { activeCharacter, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) return false;
         
         // Ensure inventory exists
         const inventory = activeCharacter.inventory || [];
@@ -1092,6 +1132,12 @@ export const useGameStore = create<GameState>()(
       
       // Shop Functions
       buyItem: (itemId: string) => {
+        const { isAuthenticated } = get();
+        if (!isAuthenticated) {
+          get().addNotification('Please log in to purchase items', 'error');
+          return false;
+        }
+        
         const shopItem = get().shopItems.find((item: ShopItem) => item.id === itemId);
         if (!shopItem || shopItem.stock <= 0) {
           get().addNotification('Item out of stock!', 'error');
@@ -1116,6 +1162,12 @@ export const useGameStore = create<GameState>()(
       },
       
       purchaseItem: (itemId: string, quantity: number = 1) => {
+        const { isAuthenticated } = get();
+        if (!isAuthenticated) {
+          get().addNotification('Please log in to purchase items', 'error');
+          return false;
+        }
+        
         const shopItem = get().shopItems.find((item: ShopItem) => item.id === itemId);
         if (!shopItem || shopItem.stock < quantity) {
           get().addNotification('Not enough stock available!', 'error');
@@ -1145,8 +1197,8 @@ export const useGameStore = create<GameState>()(
       },
       
       sellItem: (itemId: string) => {
-        const { activeCharacter } = get();
-        if (!activeCharacter) return false;
+        const { activeCharacter, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) return false;
         
         // Ensure inventory exists
         const inventory = activeCharacter.inventory || [];
@@ -1183,8 +1235,8 @@ export const useGameStore = create<GameState>()(
       calculateTotalStats: calculateTotalStats,
       
       startEnemyAttack: () => {
-        const { activeCharacter, selectedOpponent, updateCharacterHealth } = get();
-        if (!activeCharacter || !selectedOpponent) return;
+        const { activeCharacter, selectedOpponent, updateCharacterHealth, isAuthenticated } = get();
+        if (!activeCharacter || !selectedOpponent || !isAuthenticated) return;
         
         // Enhanced AI: Calculate damage based on enemy stats with strategic variation
         const baseDamage = Math.floor(selectedOpponent.attack * 0.8 + Math.random() * selectedOpponent.attack * 0.4);
@@ -1220,8 +1272,8 @@ export const useGameStore = create<GameState>()(
       },
       
       handleDefeat: () => {
-        const { activeCharacter } = get();
-        if (!activeCharacter) return;
+        const { activeCharacter, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) return;
         
         // Set health to 0 (fainted state)
         get().updateCharacterHealth(activeCharacter.id, 0);
@@ -1241,7 +1293,11 @@ export const useGameStore = create<GameState>()(
       
       // Familiar Functions
       canSummonFamiliar: (type: FamiliarType) => {
-        const { activeCharacter, diamonds } = get();
+        const { activeCharacter, diamonds, isAuthenticated } = get();
+        
+        if (!isAuthenticated) {
+          return { canSummon: false, reason: 'Please log in', cost: familiarCosts[type] };
+        }
         
         if (!activeCharacter) {
           return { canSummon: false, reason: 'No active character', cost: familiarCosts[type] };
@@ -1276,8 +1332,8 @@ export const useGameStore = create<GameState>()(
         const { canSummon, cost } = get().canSummonFamiliar(type);
         if (!canSummon) return false;
         
-        const { activeCharacter } = get();
-        if (!activeCharacter) return false;
+        const { activeCharacter, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) return false;
         
         // Spend diamonds
         set((state: GameState) => ({
@@ -1319,8 +1375,8 @@ export const useGameStore = create<GameState>()(
       },
       
       dismissFamiliar: () => {
-        const { activeCharacter } = get();
-        if (!activeCharacter || !activeCharacter.familiar) return;
+        const { activeCharacter, isAuthenticated } = get();
+        if (!activeCharacter || !activeCharacter.familiar || !isAuthenticated) return;
         
         set((state: GameState) => ({
           characters: state.characters.map((c: Character) =>
@@ -1332,8 +1388,8 @@ export const useGameStore = create<GameState>()(
       
       // Party Functions
       createParty: (name: string) => {
-        const { activeCharacter } = get();
-        if (!activeCharacter) return;
+        const { activeCharacter, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) return;
         
         const newParty: Party = {
           id: Date.now().toString(),
@@ -1363,8 +1419,8 @@ export const useGameStore = create<GameState>()(
       },
       
       kickFromParty: (playerId: string) => {
-        const { activeParty, activeCharacter } = get();
-        if (!activeParty || !activeCharacter || activeParty.leaderId !== activeCharacter.id) return;
+        const { activeParty, activeCharacter, isAuthenticated } = get();
+        if (!activeParty || !activeCharacter || activeParty.leaderId !== activeCharacter.id || !isAuthenticated) return;
         
         set((state: GameState) => ({
           activeParty: {
@@ -1376,6 +1432,12 @@ export const useGameStore = create<GameState>()(
       
       // Friend Functions
       addFriend: (playerName: string) => {
+        const { isAuthenticated } = get();
+        if (!isAuthenticated) {
+          get().addNotification('Please log in to add friends', 'error');
+          return false;
+        }
+        
         // Mock implementation - in a real app, this would send a friend request
         const newFriend: Friend = {
           id: Date.now().toString(),
@@ -1395,6 +1457,9 @@ export const useGameStore = create<GameState>()(
       },
       
       removeFriend: (friendId: string) => {
+        const { isAuthenticated } = get();
+        if (!isAuthenticated) return;
+        
         set((state: GameState) => ({
           friendsList: state.friendsList.filter(friend => friend.id !== friendId),
           onlineFriends: state.onlineFriends.filter(id => id !== friendId)
@@ -1407,8 +1472,8 @@ export const useGameStore = create<GameState>()(
       
       // Guild Functions
       createGuild: (name: string, description: string, tag: string) => {
-        const { activeCharacter } = get();
-        if (!activeCharacter) return;
+        const { activeCharacter, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) return;
         
         const newGuild: Guild = {
           id: Date.now().toString(),
@@ -1437,8 +1502,8 @@ export const useGameStore = create<GameState>()(
       },
       
       joinGuild: (guildId: string) => {
-        const { activeCharacter, guilds } = get();
-        if (!activeCharacter) return;
+        const { activeCharacter, guilds, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) return;
         
         const guild = guilds.find(g => g.id === guildId);
         if (!guild) return;
@@ -1467,8 +1532,8 @@ export const useGameStore = create<GameState>()(
       },
       
       leaveGuild: () => {
-        const { activeCharacter, guilds } = get();
-        if (!activeCharacter || !activeCharacter.guildId) return;
+        const { activeCharacter, guilds, isAuthenticated } = get();
+        if (!activeCharacter || !activeCharacter.guildId || !isAuthenticated) return;
         
         const guild = guilds.find(g => g.id === activeCharacter.guildId);
         if (!guild) return;
@@ -1511,8 +1576,8 @@ export const useGameStore = create<GameState>()(
       },
       
       autoJoinGuildChat: (guildId: string) => {
-        const { guilds, activeCharacter, chatLobbies } = get();
-        if (!activeCharacter) return;
+        const { guilds, activeCharacter, chatLobbies, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) return;
         
         const guild = guilds.find(g => g.id === guildId);
         if (!guild) return;
@@ -1538,8 +1603,8 @@ export const useGameStore = create<GameState>()(
       },
       
       leaveGuildChat: (guildId: string) => {
-        const { activeCharacter } = get();
-        if (!activeCharacter) return;
+        const { activeCharacter, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) return;
         
         const guildChatId = `guild_${guildId}`;
         
@@ -1554,8 +1619,8 @@ export const useGameStore = create<GameState>()(
       
       // Mail Functions
       sendMail: (recipient: string, subject: string, message: string) => {
-        const { activeCharacter } = get();
-        if (!activeCharacter) return;
+        const { activeCharacter, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) return;
         
         const newMail: Mail = {
           id: Date.now().toString(),
@@ -1574,6 +1639,9 @@ export const useGameStore = create<GameState>()(
       },
       
       markMailAsRead: (mailId: string) => {
+        const { isAuthenticated } = get();
+        if (!isAuthenticated) return;
+        
         set((state: GameState) => ({
           mailbox: state.mailbox.map(mail =>
             mail.id === mailId ? { ...mail, isRead: true } : mail
@@ -1582,12 +1650,18 @@ export const useGameStore = create<GameState>()(
       },
       
       deleteMail: (mailId: string) => {
+        const { isAuthenticated } = get();
+        if (!isAuthenticated) return;
+        
         set((state: GameState) => ({
           mailbox: state.mailbox.filter(mail => mail.id !== mailId)
         }));
       },
       
       toggleMailStar: (mailId: string) => {
+        const { isAuthenticated } = get();
+        if (!isAuthenticated) return;
+        
         set((state: GameState) => ({
           mailbox: state.mailbox.map(mail =>
             mail.id === mailId ? { ...mail, isStarred: !mail.isStarred } : mail
@@ -1597,8 +1671,8 @@ export const useGameStore = create<GameState>()(
       
       // Research Functions
       getAvailableResearch: () => {
-        const { activeCharacter, completedResearch, researchItems } = get();
-        if (!activeCharacter) return [];
+        const { activeCharacter, completedResearch, researchItems, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) return [];
         
         return researchItems.filter(research => {
           // Check if research is not completed and not active
@@ -1621,7 +1695,13 @@ export const useGameStore = create<GameState>()(
       },
       
       startResearch: (researchId: string) => {
-        const { researchItems, activeCharacter, activeResearch } = get();
+        const { researchItems, activeCharacter, activeResearch, isAuthenticated } = get();
+        
+        if (!isAuthenticated) {
+          get().addNotification('Please log in to start research', 'error');
+          return false;
+        }
+        
         const research = researchItems.find(r => r.id === researchId);
         
         if (!research || !activeCharacter) {
@@ -1670,7 +1750,13 @@ export const useGameStore = create<GameState>()(
       },
       
       completeResearch: (researchId: string) => {
-        const { activeResearch, activeCharacter } = get();
+        const { activeResearch, activeCharacter, isAuthenticated } = get();
+        
+        if (!isAuthenticated) {
+          console.error("Not authenticated");
+          return false;
+        }
+        
         const research = activeResearch.find(r => r.id === researchId);
         
         if (!research || !activeCharacter) {
@@ -1763,21 +1849,28 @@ export const useGameStore = create<GameState>()(
             const spellUnlocks = rewards.unlocks.filter(u => u.startsWith('spell:')).map(u => u.split(':')[1]);
             const itemUnlocks = rewards.unlocks.filter(u => u.startsWith('item:')).map(u => u.split(':')[1]);
             
-            let mailContent = `Your research on ${research.name} has yielded valuable results!\n\n`;
+            let mailContent = `Your research on ${research.name} has yielded valuable results!
+
+`;
             
             if (spellUnlocks.length > 0) {
-              mailContent += "Spells Unlocked:\n";
+              mailContent += "Spells Unlocked:
+";
               spellUnlocks.forEach(spellId => {
                 const spell = spells.find(s => s.id === spellId);
-                mailContent += `- ${spell ? spell.name : spellId}\n`;
+                mailContent += `- ${spell ? spell.name : spellId}
+`;
               });
-              mailContent += "\n";
+              mailContent += "
+";
             }
             
             if (itemUnlocks.length > 0) {
-              mailContent += "Items Unlocked:\n";
+              mailContent += "Items Unlocked:
+";
               itemUnlocks.forEach(itemId => {
-                mailContent += `- ${itemId === 'crafting_kit' ? 'Basic Crafting Kit' : 'Artisan Tools'}\n`;
+                mailContent += `- ${itemId === 'crafting_kit' ? 'Basic Crafting Kit' : 'Artisan Tools'}
+`;
               });
             }
             
@@ -1808,6 +1901,9 @@ export const useGameStore = create<GameState>()(
       },
       
       skipResearchWithDiamonds: (researchId: string) => {
+        const { isAuthenticated } = get();
+        if (!isAuthenticated) return false;
+        
         const research = get().activeResearch.find(r => r.id === researchId);
         if (!research) return false;
         
@@ -1829,8 +1925,11 @@ export const useGameStore = create<GameState>()(
       
       // PVP Functions
       joinPvpQueue: () => {
-        const { activeCharacter } = get();
-        if (!activeCharacter) return false;
+        const { activeCharacter, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) {
+          get().addNotification('Please log in and select a character to join PVP', 'error');
+          return false;
+        }
         
         set((state: GameState) => ({
           pvpQueue: [...state.pvpQueue, {
@@ -1870,8 +1969,8 @@ export const useGameStore = create<GameState>()(
       },
       
       leavePvpQueue: () => {
-        const { activeCharacter } = get();
-        if (!activeCharacter) return;
+        const { activeCharacter, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) return;
         
         set((state: GameState) => ({
           pvpQueue: state.pvpQueue.filter(p => p.playerId !== activeCharacter.id)
@@ -1881,8 +1980,8 @@ export const useGameStore = create<GameState>()(
       },
       
       startPvpMatch: (opponentId: string) => {
-        const { activeCharacter, pvpQueue } = get();
-        if (!activeCharacter) return false;
+        const { activeCharacter, pvpQueue, isAuthenticated } = get();
+        if (!activeCharacter || !isAuthenticated) return false;
         
         const opponent = pvpQueue.find(p => p.playerId === opponentId);
         if (!opponent) return false;
@@ -1912,8 +2011,8 @@ export const useGameStore = create<GameState>()(
       },
       
       endPvpMatch: (winnerId: string) => {
-        const { activePvpMatch, activeCharacter } = get();
-        if (!activePvpMatch || !activeCharacter) return;
+        const { activePvpMatch, activeCharacter, isAuthenticated } = get();
+        if (!activePvpMatch || !activeCharacter || !isAuthenticated) return;
         
         const isWinner = winnerId === activeCharacter.id;
         const rankingChange = isWinner ? 25 : -15;
@@ -1948,11 +2047,15 @@ export const useGameStore = create<GameState>()(
       
       // Chat Functions
       setActiveChannel: (channelId: string) => {
+        const { isAuthenticated } = get();
+        if (!isAuthenticated) return;
+        
         set({ activeChannel: channelId });
       },
       
       addChatMessage: (message: ChatMessage) => {
-        const { activeChannel } = get();
+        const { activeChannel, isAuthenticated } = get();
+        if (!isAuthenticated) return;
         
         set((state: GameState) => ({
           chatLobbies: state.chatLobbies.map((lobby: ChatLobby) => 
@@ -1965,7 +2068,9 @@ export const useGameStore = create<GameState>()(
       
       createChatLobby: (name: string, description: string, isPrivate: boolean) => {
         const character = get().activeCharacter;
-        if (!character) return;
+        const { isAuthenticated } = get();
+        
+        if (!character || !isAuthenticated) return;
         
         const newLobby: ChatLobby = {
           id: Date.now().toString(),
@@ -1987,7 +2092,9 @@ export const useGameStore = create<GameState>()(
       
       joinChatLobby: (lobbyId: string) => {
         const character = get().activeCharacter;
-        if (!character) return;
+        const { isAuthenticated } = get();
+        
+        if (!character || !isAuthenticated) return;
         
         set((state: GameState) => ({
           chatLobbies: state.chatLobbies.map((lobby: ChatLobby) =>
@@ -2001,7 +2108,9 @@ export const useGameStore = create<GameState>()(
       
       leaveChatLobby: (lobbyId: string) => {
         const character = get().activeCharacter;
-        if (!character) return;
+        const { isAuthenticated } = get();
+        
+        if (!character || !isAuthenticated) return;
         
         set((state: GameState) => ({
           chatLobbies: state.chatLobbies.map((lobby: ChatLobby) =>
@@ -2023,7 +2132,9 @@ export const useGameStore = create<GameState>()(
       
       addReactionToMessage: (messageId: string, emoji: string) => {
         const character = get().activeCharacter;
-        if (!character) return;
+        const { isAuthenticated } = get();
+        
+        if (!character || !isAuthenticated) return;
         
         set((state: GameState) => ({
           chatLobbies: state.chatLobbies.map((lobby: ChatLobby) => ({
@@ -2089,6 +2200,9 @@ export const useGameStore = create<GameState>()(
 
       // Real-time Chat Functions
       connectToChat: (userId: string, userName: string) => {
+        const { isAuthenticated } = get();
+        if (!isAuthenticated) return;
+        
         // Add user to online users list
         set((state: GameState) => ({
           onlineUsers: [

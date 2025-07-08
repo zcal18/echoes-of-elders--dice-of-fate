@@ -33,6 +33,7 @@ let wsConnection: WebSocket | null = null;
 let reconnectAttempts = 0;
 const maxReconnectAttempts = 5;
 const reconnectDelay = 1000;
+let isManualDisconnect = false;
 
 export const connectWebSocket = (userId: string, userName: string, channelId: string = 'general') => {
   if (Platform.OS !== 'web') {
@@ -40,10 +41,17 @@ export const connectWebSocket = (userId: string, userName: string, channelId: st
     return null;
   }
 
+  // Don't reconnect if manually disconnected
+  if (isManualDisconnect) {
+    console.log('Manual disconnect active, not connecting');
+    return null;
+  }
+
   try {
     // Close existing connection if any
     if (wsConnection && wsConnection.readyState !== WebSocket.CLOSED) {
-      wsConnection.close();
+      console.log('Closing existing WebSocket connection');
+      wsConnection.close(1000, 'Reconnecting');
     }
 
     const baseUrl = getBaseUrl();
@@ -53,35 +61,34 @@ export const connectWebSocket = (userId: string, userName: string, channelId: st
     wsConnection = new WebSocket(wsUrl);
     
     wsConnection.onopen = (event) => {
-      console.log('WebSocket connected successfully', event);
+      console.log('WebSocket connected successfully');
       reconnectAttempts = 0;
+      isManualDisconnect = false;
       
       // Send join message
       if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
-        wsConnection.send(JSON.stringify({
+        const joinMessage = {
           type: 'join',
           userId,
           userName,
           channelId
-        }));
+        };
+        console.log('Sending join message:', joinMessage);
+        wsConnection.send(JSON.stringify(joinMessage));
       }
     };
     
     wsConnection.onerror = (event) => {
-      console.error('WebSocket connection error:', {
-        type: event.type,
-        target: event.target,
-        timeStamp: event.timeStamp
-      });
+      console.error('WebSocket connection error:', event);
       
-      // Attempt to reconnect if we haven't exceeded max attempts
-      if (reconnectAttempts < maxReconnectAttempts) {
+      // Only attempt to reconnect if not manually disconnected and haven't exceeded max attempts
+      if (!isManualDisconnect && reconnectAttempts < maxReconnectAttempts) {
         setTimeout(() => {
           reconnectAttempts++;
           console.log(`Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts})`);
           connectWebSocket(userId, userName, channelId);
         }, reconnectDelay * reconnectAttempts);
-      } else {
+      } else if (reconnectAttempts >= maxReconnectAttempts) {
         console.error('Max reconnection attempts reached');
       }
     };
@@ -92,10 +99,11 @@ export const connectWebSocket = (userId: string, userName: string, channelId: st
         reason: event.reason,
         wasClean: event.wasClean
       });
+      
       wsConnection = null;
       
-      // Only attempt to reconnect if it wasn't a manual close
-      if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
+      // Only attempt to reconnect if it wasn't a manual close and we haven't exceeded max attempts
+      if (!isManualDisconnect && event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
         setTimeout(() => {
           reconnectAttempts++;
           console.log(`Attempting to reconnect after close (${reconnectAttempts}/${maxReconnectAttempts})`);
@@ -112,27 +120,31 @@ export const connectWebSocket = (userId: string, userName: string, channelId: st
 };
 
 export const disconnectWebSocket = (userId: string) => {
+  isManualDisconnect = true;
+  
   if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
     try {
-      wsConnection.send(JSON.stringify({
+      const leaveMessage = {
         type: 'leave',
         userId
-      }));
+      };
+      console.log('Sending leave message:', leaveMessage);
+      wsConnection.send(JSON.stringify(leaveMessage));
     } catch (error) {
       console.error('Error sending leave message:', error);
     }
     
     wsConnection.close(1000, 'User disconnecting');
-    wsConnection = null;
   }
   
-  // Reset reconnection attempts
+  wsConnection = null;
   reconnectAttempts = 0;
 };
 
 export const sendWebSocketMessage = (message: any) => {
   if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
     try {
+      console.log('Sending WebSocket message:', message);
       wsConnection.send(JSON.stringify(message));
       return true;
     } catch (error) {
@@ -140,7 +152,7 @@ export const sendWebSocketMessage = (message: any) => {
       return false;
     }
   } else {
-    console.warn('WebSocket not connected, cannot send message');
+    console.warn('WebSocket not connected, cannot send message. Status:', getWebSocketStatus());
     return false;
   }
 };
