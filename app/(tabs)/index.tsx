@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions
 import { Stack, useRouter } from 'expo-router';
 import { useGameStore } from '@/hooks/useGameStore';
 import colors from '@/constants/colors';
-import { Sword, Shield, Users, MessageSquare, User } from 'lucide-react-native';
+import { Sword, Shield, Users, MessageSquare, User, Heart } from 'lucide-react-native';
 import NotificationSystem from '@/components/NotificationSystem';
 import ReactivePlayerCard from '@/components/Game/ReactivePlayerCard';
 
@@ -22,6 +22,7 @@ export default function HomeScreen() {
   } = useGameStore();
   
   const [showCharacterCard, setShowCharacterCard] = useState(false);
+  const [showFamiliarModal, setShowFamiliarModal] = useState(false);
   
   // Fix: Move navigation logic to useEffect to prevent setState during render
   useEffect(() => {
@@ -120,6 +121,9 @@ export default function HomeScreen() {
   
   // Check if character is fainted
   const isCharacterFainted = activeCharacter.health.current <= 0;
+  
+  // Check if character can summon familiar
+  const canSummonFamiliar = !activeCharacter.familiar;
   
   return (
     <View style={styles.container}>
@@ -367,6 +371,24 @@ export default function HomeScreen() {
               <Text style={styles.actionTitle}>Character Card</Text>
               <Text style={styles.actionSubtitle}>View detailed card</Text>
             </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[
+                styles.actionCard, 
+                styles.familiarAction,
+                !canSummonFamiliar && styles.disabledActionCard
+              ]}
+              onPress={() => setShowFamiliarModal(true)}
+              disabled={!canSummonFamiliar}
+            >
+              <Heart size={isTablet ? 32 : 24} color={!canSummonFamiliar ? colors.textMuted : colors.text} />
+              <Text style={[styles.actionTitle, !canSummonFamiliar && styles.disabledActionText]}>
+                {activeCharacter.familiar ? 'Manage Familiar' : 'Summon Familiar'}
+              </Text>
+              <Text style={[styles.actionSubtitle, !canSummonFamiliar && styles.disabledActionText]}>
+                {activeCharacter.familiar ? `${activeCharacter.familiar.name} (Lv.${activeCharacter.familiar.level})` : 'Get a companion'}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
         
@@ -415,6 +437,71 @@ export default function HomeScreen() {
                 isActive={true}
                 isAnimating={false}
               />
+            </View>
+          </View>
+        </View>
+      </Modal>
+      
+      {/* Familiar Modal */}
+      <Modal
+        visible={showFamiliarModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowFamiliarModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {activeCharacter.familiar ? 'Manage Familiar' : 'Summon Familiar'}
+              </Text>
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => setShowFamiliarModal(false)}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.familiarContent}>
+              {activeCharacter.familiar ? (
+                <View style={styles.familiarInfo}>
+                  <Text style={styles.familiarName}>{activeCharacter.familiar.name}</Text>
+                  <Text style={styles.familiarType}>Type: {activeCharacter.familiar.type}</Text>
+                  <Text style={styles.familiarLevel}>Level: {activeCharacter.familiar.level}</Text>
+                  <Text style={styles.familiarLoyalty}>Loyalty: {activeCharacter.familiar.loyalty}%</Text>
+                  
+                  <TouchableOpacity 
+                    style={styles.dismissButton}
+                    onPress={() => {
+                      useGameStore.getState().dismissFamiliar();
+                      setShowFamiliarModal(false);
+                    }}
+                  >
+                    <Text style={styles.dismissButtonText}>Dismiss Familiar</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.summonInfo}>
+                  <Text style={styles.summonText}>
+                    Familiars are loyal companions that aid you in your adventures. 
+                    They require diamonds to summon and grow stronger over time.
+                  </Text>
+                  <Text style={styles.summonNote}>
+                    Visit the Shop to purchase familiar summoning items with diamonds.
+                  </Text>
+                  
+                  <TouchableOpacity 
+                    style={styles.shopButton}
+                    onPress={() => {
+                      setShowFamiliarModal(false);
+                      router.push('/(tabs)/shop');
+                    }}
+                  >
+                    <Text style={styles.shopButtonText}>Visit Shop</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -774,6 +861,10 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: colors.secondary,
   },
+  familiarAction: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#e91e63',
+  },
   actionTitle: {
     fontSize: isTablet ? 16 : 14,
     fontWeight: 'bold',
@@ -860,5 +951,70 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     alignItems: 'center',
+  },
+  familiarContent: {
+    alignItems: 'center',
+  },
+  familiarName: {
+    fontSize: isTablet ? 24 : 20,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  familiarType: {
+    fontSize: isTablet ? 16 : 14,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  familiarLevel: {
+    fontSize: isTablet ? 16 : 14,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  familiarLoyalty: {
+    fontSize: isTablet ? 16 : 14,
+    color: colors.textSecondary,
+    marginBottom: 20,
+  },
+  dismissButton: {
+    backgroundColor: colors.error,
+    borderRadius: 12,
+    padding: isTablet ? 16 : 12,
+    alignItems: 'center',
+    minWidth: 120,
+  },
+  dismissButtonText: {
+    color: colors.text,
+    fontSize: isTablet ? 16 : 14,
+    fontWeight: 'bold',
+  },
+  summonInfo: {
+    alignItems: 'center',
+  },
+  summonText: {
+    fontSize: isTablet ? 16 : 14,
+    color: colors.text,
+    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: isTablet ? 24 : 20,
+  },
+  summonNote: {
+    fontSize: isTablet ? 14 : 12,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: isTablet ? 20 : 16,
+  },
+  shopButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    padding: isTablet ? 16 : 12,
+    alignItems: 'center',
+    minWidth: 120,
+  },
+  shopButtonText: {
+    color: colors.text,
+    fontSize: isTablet ? 16 : 14,
+    fontWeight: 'bold',
   },
 });
