@@ -1,6 +1,7 @@
+import React from 'react';
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
-import { Swords, Home, BookOpen, Crown, MessageSquare, Users, Mail, ShoppingCart, Package } from 'lucide-react-native';
+import { Sword, Package, Users, MessageSquare, User, Mail, Crown, Home } from 'lucide-react-native';
 import colors from '@/constants/colors';
 
 export default function TabLayout() {
@@ -11,12 +12,23 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
           backgroundColor: colors.surface,
-          borderTopColor: colors.surfaceLight,
-          height: Platform.OS === 'ios' ? 88 : 68,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 8,
+          borderTopColor: colors.border,
+          height: Platform.OS === 'ios' ? 88 : 64,
+          paddingBottom: Platform.OS === 'ios' ? 20 : 8,
           paddingTop: 8,
         },
-        headerShown: false,
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '600',
+        },
+        headerStyle: {
+          backgroundColor: colors.surface,
+          borderBottomColor: colors.border,
+        },
+        headerTintColor: colors.text,
+        headerTitleStyle: {
+          fontWeight: 'bold',
+        },
       }}
     >
       <Tabs.Screen
@@ -24,75 +36,73 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
+          headerTitle: 'Echoes of Elders',
         }}
       />
-      
       <Tabs.Screen
         name="combat"
         options={{
           title: 'Combat',
-          tabBarIcon: ({ color, size }) => <Swords size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Sword size={size} color={color} />,
+          headerTitle: 'Combat Arena',
         }}
       />
-      
       <Tabs.Screen
         name="inventory"
         options={{
           title: 'Inventory',
           tabBarIcon: ({ color, size }) => <Package size={size} color={color} />,
+          headerTitle: 'Inventory & Equipment',
         }}
       />
-      
       <Tabs.Screen
         name="community"
         options={{
-          title: 'Community',
-          tabBarIcon: ({ color, size }) => <Crown size={size} color={color} />,
+          title: 'Guild',
+          tabBarIcon: ({ color, size }) => <Users size={size} color={color} />,
+          headerTitle: 'Guild & Community',
         }}
       />
-      
-      <Tabs.Screen
-        name="library"
-        options={{
-          title: 'Library',
-          tabBarIcon: ({ color, size }) => <BookOpen size={size} color={color} />,
-        }}
-      />
-      
       <Tabs.Screen
         name="chat"
         options={{
           title: 'Chat',
           tabBarIcon: ({ color, size }) => <MessageSquare size={size} color={color} />,
+          headerTitle: 'Chat Rooms',
         }}
       />
-      
       <Tabs.Screen
         name="inbox"
         options={{
           title: 'Inbox',
           tabBarIcon: ({ color, size }) => <Mail size={size} color={color} />,
+          headerTitle: 'Messages',
         }}
       />
-      
       <Tabs.Screen
-        name="shop"
+        name="profile"
         options={{
-          title: 'Shop',
-          tabBarIcon: ({ color, size }) => <ShoppingCart size={size} color={color} />,
+          title: 'Profile',
+          tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
+          headerTitle: 'Character Profile',
         }}
       />
-      
-      {/* Hidden tabs - accessible via top icons */}
       <Tabs.Screen
         name="kingdom"
+        options={{
+          title: 'Kingdom',
+          tabBarIcon: ({ color, size }) => <Crown size={size} color={color} />,
+          headerTitle: 'Kingdom Map',
+        }}
+      />
+      <Tabs.Screen
+        name="shop"
         options={{
           href: null, // Hide from tab bar
         }}
       />
-      
       <Tabs.Screen
-        name="profile"
+        name="library"
         options={{
           href: null, // Hide from tab bar
         }}

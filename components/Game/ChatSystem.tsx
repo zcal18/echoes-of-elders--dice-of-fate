@@ -720,7 +720,7 @@ export default function ChatSystem() {
           <View style={styles.membersHeader}>
             <Users size={16} color={colors.text} />
             <Text style={styles.membersTitle}>
-              Online ({onlineMembersInChannel.length})
+              {`Online (${onlineMembersInChannel.length})`}
             </Text>
             <TouchableOpacity
               style={styles.closeMembersButton}
