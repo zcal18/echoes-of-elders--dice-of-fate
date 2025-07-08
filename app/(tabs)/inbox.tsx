@@ -96,6 +96,11 @@ export default function InboxScreen() {
     <View style={styles.container}>
       <Stack.Screen 
         options={{
+          title: 'Inbox',
+          headerStyle: {
+            backgroundColor: colors.surface,
+          },
+          headerTintColor: colors.text,
           headerRight: () => (
             <View style={styles.headerButtons}>
               <TouchableOpacity 

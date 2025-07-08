@@ -152,7 +152,11 @@ export default function ShopScreen() {
     <View style={styles.container}>
       <Stack.Screen 
         options={{
-          title: 'SHOP',
+          title: 'Shop',
+          headerStyle: {
+            backgroundColor: colors.surface,
+          },
+          headerTintColor: colors.text,
           headerRight: () => (
             <View style={styles.headerButtons}>
               <TouchableOpacity 

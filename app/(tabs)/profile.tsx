@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Alert, Modal, Platform, Dimensions } from 'react-native';
-import { Stack } from 'expo-router';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { Mail, ShoppingCart, User, Settings, Users } from 'lucide-react-native';
 import { useGameStore } from '@/hooks/useGameStore';
 import colors from '@/constants/colors';
@@ -270,6 +269,11 @@ export default function ProfileScreen() {
     <View style={styles.container}>
       <Stack.Screen 
         options={{
+          title: 'Profile',
+          headerStyle: {
+            backgroundColor: colors.surface,
+          },
+          headerTintColor: colors.text,
           headerRight: () => (
             <View style={styles.headerButtons}>
               <TouchableOpacity 

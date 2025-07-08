@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert,
 import { useGameStore } from '@/hooks/useGameStore';
 import colors from '@/constants/colors';
 import { ChatMessage, ChatLobby, OnlineUser } from '@/types/game';
-import { MessageSquare, Plus, Settings, X, ChevronLeft, ChevronRight, Smile, ExternalLink, Minimize2, Users, Type, Palette, Activity, Send, Menu } from 'lucide-react-native';
+import { MessageSquare, Plus, X, ChevronLeft, ChevronRight, Smile, ExternalLink, Minimize2, Users, Type, Palette, Activity, Send, Menu } from 'lucide-react-native';
 import { trpc } from '@/lib/trpc';
 import { connectWebSocket, disconnectWebSocket, sendWebSocketMessage, getWebSocketConnection, getWebSocketStatus } from '@/lib/trpc';
 
