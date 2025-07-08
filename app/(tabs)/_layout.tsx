@@ -88,15 +88,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="kingdom"
+        name="shop"
         options={{
-          title: 'Kingdom',
+          title: 'Shop',
           tabBarIcon: ({ color, size }) => <ShoppingBag size={size} color={color} />,
-          headerTitle: 'Kingdom Map',
+          headerTitle: 'Merchant Shop',
         }}
       />
       <Tabs.Screen
-        name="shop"
+        name="kingdom"
         options={{
           href: null, // Hide from tab bar
         }}
