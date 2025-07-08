@@ -508,9 +508,6 @@ export default function ChatSystem() {
               </TouchableOpacity>
             )}
             <View style={styles.chatHeaderContent}>
-              <Text style={styles.chatHeaderText}>
-                {activeLobby?.name || 'Chat'}
-              </Text>
               {activeLobby?.description && (
                 <Text style={styles.chatHeaderDescription}>
                   {activeLobby.description}
@@ -885,7 +882,6 @@ const styles = StyleSheet.create({
   },
   // Enhanced desktop chat area for wider layout
   desktopChatArea: {
-    maxWidth: 'none',
     minWidth: 600, // Ensure minimum width for desktop
   },
   chatHeader: {
@@ -901,11 +897,6 @@ const styles = StyleSheet.create({
   },
   chatHeaderContent: {
     flex: 1,
-  },
-  chatHeaderText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.text,
   },
   chatHeaderDescription: {
     fontSize: 14,

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Stack } from 'expo-router';
 import ChatSystem from '@/components/Game/ChatSystem';
 import { useGameStore } from '@/hooks/useGameStore';
@@ -25,45 +25,11 @@ export default function ChatScreen() {
     return () => clearInterval(interval);
   }, []);
   
-  // Connection status indicator component
-  const ConnectionIndicator = () => (
-    <View style={styles.connectionContainer}>
-      <View style={[
-        styles.connectionDot, 
-        { backgroundColor: connectionStatus === 'connected' ? colors.success : colors.warning }
-      ]} />
-      <Text style={styles.connectionText}>
-        {connectionStatus === 'connected' ? 'Online' : 'Offline'}
-      </Text>
-    </View>
-  );
-  
-  // If chat is popped out, don't render it in the tab
-  if (chatPopout) {
-    return (
-      <View style={styles.container}>
-        <Stack.Screen 
-          options={{ 
-            title: 'Chat', 
-            headerShown: true,
-            headerRight: () => <ConnectionIndicator />
-          }} 
-        />
-        <View style={styles.popoutMessage}>
-          <Text style={styles.popoutText}>Chat is currently popped out</Text>
-          <Text style={styles.popoutSubtext}>Close the pop-out window to use chat here</Text>
-        </View>
-      </View>
-    );
-  }
-  
   return (
     <View style={styles.container}>
       <Stack.Screen 
         options={{ 
-          title: 'Chat', 
-          headerShown: true,
-          headerRight: () => <ConnectionIndicator />
+          headerShown: false
         }} 
       />
       <ChatSystem />
@@ -75,40 +41,5 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  popoutMessage: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-    padding: 20,
-  },
-  popoutText: {
-    fontSize: 18,
-    color: colors.text,
-    textAlign: 'center',
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  popoutSubtext: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  connectionContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 16,
-    gap: 6,
-  },
-  connectionDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  connectionText: {
-    color: colors.text,
-    fontSize: 12,
-    fontWeight: '500',
   },
 });
