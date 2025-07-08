@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
-import { Sword, Package, Users, MessageSquare, User, Mail, Crown, Home } from 'lucide-react-native';
+import { Sword, Package, Users, MessageSquare, User, Mail, ShoppingBag, Home } from 'lucide-react-native';
 import colors from '@/constants/colors';
 
 export default function TabLayout() {
@@ -12,7 +12,7 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
           backgroundColor: colors.surface,
-          borderTopColor: colors.border,
+          borderTopColor: colors.cardBorder,
           height: Platform.OS === 'ios' ? 88 : 64,
           paddingBottom: Platform.OS === 'ios' ? 20 : 8,
           paddingTop: 8,
@@ -23,7 +23,7 @@ export default function TabLayout() {
         },
         headerStyle: {
           backgroundColor: colors.surface,
-          borderBottomColor: colors.border,
+          borderBottomColor: colors.cardBorder,
         },
         headerTintColor: colors.text,
         headerTitleStyle: {
@@ -91,7 +91,7 @@ export default function TabLayout() {
         name="kingdom"
         options={{
           title: 'Kingdom',
-          tabBarIcon: ({ color, size }) => <Crown size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <ShoppingBag size={size} color={color} />,
           headerTitle: 'Kingdom Map',
         }}
       />
