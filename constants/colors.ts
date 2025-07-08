@@ -23,6 +23,7 @@ export default {
   // Status colors
   success: '#10B981',
   error: '#EF4444',
+  errorLight: '#FCA5A5',
   warning: '#F59E0B',
   info: '#3B82F6',
   

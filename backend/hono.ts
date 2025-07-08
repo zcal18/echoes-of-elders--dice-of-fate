@@ -51,7 +51,7 @@ app.get("/ws", upgradeWebSocket((c) => {
                 }));
               }
             } catch (error) {
-              console.error('Error sending join confirmation:', error);
+              console.error('Error sending join confirmation:', error instanceof Error ? error.message : String(error));
             }
             break;
             
@@ -193,13 +193,13 @@ app.get("/ws", upgradeWebSocket((c) => {
                 }));
               }
             } catch (error) {
-              console.error('Error sending unknown type error:', error);
+              console.error('Error sending unknown type error:', error instanceof Error ? error.message : String(error));
             }
         }
       } catch (error) {
         console.error('WebSocket message processing error:', {
-          error: error.message,
-          stack: error.stack,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
           data: event.data
         });
         
@@ -212,7 +212,7 @@ app.get("/ws", upgradeWebSocket((c) => {
             }));
           }
         } catch (sendError) {
-          console.error('Failed to send error message:', sendError);
+          console.error('Failed to send error message:', sendError instanceof Error ? sendError.message : String(sendError));
         }
       }
     },
@@ -255,7 +255,7 @@ app.get("/ws", upgradeWebSocket((c) => {
           }));
         }
       } catch (sendError) {
-        console.error('Failed to send error notification:', sendError);
+        console.error('Failed to send error notification:', sendError instanceof Error ? sendError.message : String(sendError));
       }
     }
   };
@@ -279,7 +279,7 @@ function broadcastToChannel(channelId: string, message: any, excludeUserId?: str
           userChannels.delete(userId);
         }
       } catch (error) {
-        console.error(`Error broadcasting to user ${userId}:`, error);
+        console.error(`Error broadcasting to user ${userId}:`, error instanceof Error ? error.message : String(error));
         // Remove dead connection
         connectedClients.delete(userId);
         userChannels.delete(userId);
@@ -306,7 +306,7 @@ function broadcastToAll(message: any) {
         userChannels.delete(userId);
       }
     } catch (error) {
-      console.error(`Error broadcasting to user ${userId}:`, error);
+      console.error(`Error broadcasting to user ${userId}:`, error instanceof Error ? error.message : String(error));
       // Remove dead connection
       connectedClients.delete(userId);
       userChannels.delete(userId);
@@ -341,7 +341,7 @@ function broadcastToGuildBattle(battleId: string, message: any) {
             userChannels.delete(userId);
           }
         } catch (error) {
-          console.error('Error broadcasting to guild battle:', error);
+          console.error('Error broadcasting to guild battle:', error instanceof Error ? error.message : String(error));
           // Remove dead connection
           connectedClients.delete(userId);
           userChannels.delete(userId);
@@ -396,7 +396,7 @@ function findPvpMatch(userId: string) {
           yourSide: 'player1'
         }));
       } catch (error) {
-        console.error('Error notifying player 1:', error);
+        console.error('Error notifying player 1:', error instanceof Error ? error.message : String(error));
       }
     }
     
@@ -408,7 +408,7 @@ function findPvpMatch(userId: string) {
           yourSide: 'player2'
         }));
       } catch (error) {
-        console.error('Error notifying player 2:', error);
+        console.error('Error notifying player 2:', error instanceof Error ? error.message : String(error));
       }
     }
     
