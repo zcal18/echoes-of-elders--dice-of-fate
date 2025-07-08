@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Dimensions, ActivityIndicator, Animated } from 'react-native';
 import { Stack } from 'expo-router';
 import { useRouter } from 'expo-router';
-import { Mail, ShoppingCart, User, Play, Zap, CheckCircle, AlertCircle, BookOpen, Sparkles, Clock, Star, Scroll, Lightbulb, Crown, Flame, Timer, TrendingUp, Eye } from 'lucide-react-native';
+import { Play, Zap, CheckCircle, AlertCircle, BookOpen, Sparkles, Clock, Star, Scroll, Lightbulb, Crown, Flame, Timer, TrendingUp, Eye } from 'lucide-react-native';
 import { Research } from '@/types/game';
 import colors from '@/constants/colors';
 import { useGameStore } from '@/hooks/useGameStore';
@@ -422,28 +422,7 @@ export default function LibraryScreen() {
     <View style={styles.container}>
       <Stack.Screen 
         options={{
-          headerRight: () => (
-            <View style={styles.headerButtons}>
-              <TouchableOpacity 
-                style={styles.headerButton}
-                onPress={() => router.push('/(tabs)/inbox')}
-              >
-                <Mail size={isTablet ? 24 : 20} color={colors.text} />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.headerButton}
-                onPress={() => router.push('/(tabs)/shop')}
-              >
-                <ShoppingCart size={isTablet ? 24 : 20} color={colors.text} />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.headerButton}
-                onPress={() => router.push('/(tabs)/profile')}
-              >
-                <User size={isTablet ? 24 : 20} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-          ),
+          title: 'Library',
         }}
       />
       
@@ -758,21 +737,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    gap: 8,
-    marginRight: 8,
-  },
-  headerButton: {
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    padding: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
   scrollView: {
     flex: 1,

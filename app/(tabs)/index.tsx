@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions
 import { Stack, useRouter } from 'expo-router';
 import { useGameStore } from '@/hooks/useGameStore';
 import colors from '@/constants/colors';
-import { Sword, Shield, Users, MessageSquare, ShoppingCart, User } from 'lucide-react-native';
+import { Sword, Shield, Users, MessageSquare } from 'lucide-react-native';
 import NotificationSystem from '@/components/NotificationSystem';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -102,28 +102,7 @@ export default function HomeScreen() {
       <NotificationSystem />
       <Stack.Screen 
         options={{
-          headerRight: () => (
-            <View style={styles.headerButtons}>
-              <TouchableOpacity 
-                style={styles.headerButton}
-                onPress={() => router.push('/(tabs)/chat')}
-              >
-                <MessageSquare size={isTablet ? 24 : 20} color={colors.text} />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.headerButton}
-                onPress={() => router.push('/(tabs)/shop')}
-              >
-                <ShoppingCart size={isTablet ? 24 : 20} color={colors.text} />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.headerButton}
-                onPress={() => router.push('/(tabs)/profile')}
-              >
-                <User size={isTablet ? 24 : 20} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-          ),
+          title: 'Home',
         }}
       />
       
@@ -348,12 +327,12 @@ export default function HomeScreen() {
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={[styles.actionCard, styles.shopAction]}
-              onPress={() => router.push('/(tabs)/shop')}
+              style={[styles.actionCard, styles.chatAction]}
+              onPress={() => router.push('/(tabs)/chat')}
             >
-              <ShoppingCart size={isTablet ? 32 : 24} color={colors.text} />
-              <Text style={styles.actionTitle}>Shop</Text>
-              <Text style={styles.actionSubtitle}>Buy & sell</Text>
+              <MessageSquare size={isTablet ? 32 : 24} color={colors.text} />
+              <Text style={styles.actionTitle}>Chat</Text>
+              <Text style={styles.actionSubtitle}>Talk to players</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -385,21 +364,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    gap: 8,
-    marginRight: 8,
-  },
-  headerButton: {
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    padding: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
   content: {
     padding: isTablet ? 24 : 16,
@@ -739,7 +703,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: colors.success,
   },
-  shopAction: {
+  chatAction: {
     borderLeftWidth: 4,
     borderLeftColor: colors.warning,
   },

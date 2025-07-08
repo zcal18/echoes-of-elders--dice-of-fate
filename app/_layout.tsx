@@ -4,11 +4,14 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
-import { View, Platform } from "react-native";
+import { View, Platform, TouchableOpacity } from "react-native";
+import { useRouter } from "expo-router";
+import { Mail, ShoppingCart, User } from 'lucide-react-native';
 import colors from "@/constants/colors";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc, trpcClient } from "@/lib/trpc";
 import NotificationSystem from "@/components/NotificationSystem";
+import { useGameStore } from "@/hooks/useGameStore";
 
 export const unstable_settings = {
   initialRouteName: "(tabs)",
@@ -27,6 +30,67 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+function HeaderIcons() {
+  const router = useRouter();
+  const { isAuthenticated } = useGameStore();
+  
+  if (!isAuthenticated) return null;
+  
+  return (
+    <View style={{
+      flexDirection: 'row',
+      gap: 8,
+      marginRight: 8,
+    }}>
+      <TouchableOpacity 
+        style={{
+          backgroundColor: colors.surface,
+          borderRadius: 8,
+          padding: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          elevation: 2,
+        }}
+        onPress={() => router.push('/(tabs)/inbox')}
+      >
+        <Mail size={20} color={colors.text} />
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={{
+          backgroundColor: colors.surface,
+          borderRadius: 8,
+          padding: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          elevation: 2,
+        }}
+        onPress={() => router.push('/(tabs)/shop')}
+      >
+        <ShoppingCart size={20} color={colors.text} />
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={{
+          backgroundColor: colors.surface,
+          borderRadius: 8,
+          padding: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          elevation: 2,
+        }}
+        onPress={() => router.push('/(tabs)/profile')}
+      >
+        <User size={20} color={colors.text} />
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -67,7 +131,7 @@ function RootLayoutNav() {
     <Stack
       screenOptions={{
         headerStyle: {
-          backgroundColor: colors.background,
+          backgroundColor: colors.surface,
         },
         headerTintColor: colors.text,
         headerTitleStyle: {
@@ -76,6 +140,7 @@ function RootLayoutNav() {
         contentStyle: {
           backgroundColor: colors.background,
         },
+        headerRight: () => <HeaderIcons />,
       }}
     >
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />

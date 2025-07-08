@@ -77,6 +77,28 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => <MessageSquare size={size} color={color} />,
         }}
       />
+      
+      {/* Hidden tabs - accessible via top icons */}
+      <Tabs.Screen
+        name="inbox"
+        options={{
+          href: null, // Hide from tab bar
+        }}
+      />
+      
+      <Tabs.Screen
+        name="shop"
+        options={{
+          href: null, // Hide from tab bar
+        }}
+      />
+      
+      <Tabs.Screen
+        name="profile"
+        options={{
+          href: null, // Hide from tab bar
+        }}
+      />
     </Tabs>
   );
 }

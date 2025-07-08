@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Stack } from 'expo-router';
-import { Mail, ShoppingCart, User } from 'lucide-react-native';
 import { useGameStore } from '@/hooks/useGameStore';
 import InventorySystem from '@/components/Game/InventorySystem';
 import EquipmentSystem from '@/components/Game/EquipmentSystem';
@@ -33,28 +32,7 @@ export default function InventoryScreen() {
     <View style={styles.container}>
       <Stack.Screen 
         options={{
-          headerRight: () => (
-            <View style={styles.headerButtons}>
-              <TouchableOpacity 
-                style={styles.headerButton}
-                onPress={() => router.push('/(tabs)/inbox')}
-              >
-                <Mail size={isTablet ? 24 : 20} color={colors.text} />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.headerButton}
-                onPress={() => router.push('/(tabs)/shop')}
-              >
-                <ShoppingCart size={isTablet ? 24 : 20} color={colors.text} />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.headerButton}
-                onPress={() => router.push('/(tabs)/profile')}
-              >
-                <User size={isTablet ? 24 : 20} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-          ),
+          title: 'Inventory',
         }}
       />
       
@@ -108,21 +86,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     padding: 16,
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    gap: 8,
-    marginRight: 8,
-  },
-  headerButton: {
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    padding: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
   tabsContainer: {
     flexDirection: 'row',
