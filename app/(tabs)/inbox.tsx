@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, Alert, Dimensions } from 'react-native';
-import { Stack } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { Mail, Send, Trash2, Star, StarOff } from 'lucide-react-native';
 import colors from '@/constants/colors';
@@ -94,13 +93,6 @@ export default function InboxScreen() {
   
   return (
     <View style={styles.container}>
-      <Stack.Screen 
-        options={{
-          title: 'Inbox',
-          headerShown: true,
-        }}
-      />
-      
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.composeButton}

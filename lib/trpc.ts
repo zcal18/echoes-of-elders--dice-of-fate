@@ -109,9 +109,8 @@ export const connectWebSocket = (userId: string, userName: string, channelId: st
     wsConnection.onerror = (event) => {
       console.error('WebSocket connection error:', {
         type: event.type,
-        target: event.target?.constructor?.name || 'Unknown',
-        readyState: (event.target as WebSocket)?.readyState,
-        url: (event.target as WebSocket)?.url,
+        readyState: wsConnection?.readyState,
+        url: wsConnection?.url,
         timestamp: new Date().toISOString()
       });
       

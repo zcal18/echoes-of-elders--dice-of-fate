@@ -166,9 +166,8 @@ export default function ChatSystem() {
         ws.onerror = (event) => {
           console.error('WebSocket error in ChatSystem:', {
             type: event.type,
-            target: event.target?.constructor?.name || 'Unknown',
-            readyState: (event.target as WebSocket)?.readyState,
-            url: (event.target as WebSocket)?.url
+            readyState: ws.readyState,
+            url: ws.url
           });
           setConnectionStatus('error');
           addNotification('Connection error. Retrying...', 'error');

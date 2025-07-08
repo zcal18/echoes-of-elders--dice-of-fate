@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions
 import { Stack, useRouter } from 'expo-router';
 import { useGameStore } from '@/hooks/useGameStore';
 import colors from '@/constants/colors';
-import { Sword, Shield, Users, MessageSquare, User, Heart } from 'lucide-react-native';
+import { Sword, Shield, Users, MessageSquare, User, Heart, LogOut } from 'lucide-react-native';
 import NotificationSystem from '@/components/NotificationSystem';
 import ReactivePlayerCard from '@/components/Game/ReactivePlayerCard';
 import { familiarTypes } from '@/constants/gameData';
@@ -22,7 +22,8 @@ export default function HomeScreen() {
     guilds,
     canSummonFamiliar,
     summonFamiliar,
-    dismissFamiliar
+    dismissFamiliar,
+    logout
   } = useGameStore();
   
   const [showCharacterCard, setShowCharacterCard] = useState(false);
@@ -138,6 +139,11 @@ export default function HomeScreen() {
     if (success) {
       setShowFamiliarModal(false);
     }
+  };
+  
+  const handleLogout = () => {
+    logout();
+    router.replace('/(auth)');
   };
   
   const guildInfo = getGuildInfo();
@@ -419,6 +425,17 @@ export default function HomeScreen() {
               }
             </Text>
           </View>
+        </View>
+        
+        {/* Logout Button */}
+        <View style={styles.logoutSection}>
+          <TouchableOpacity 
+            style={styles.logoutButton}
+            onPress={handleLogout}
+          >
+            <LogOut size={isTablet ? 24 : 20} color={colors.text} />
+            <Text style={styles.logoutButtonText}>Logout</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
       
@@ -913,6 +930,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 20,
     padding: isTablet ? 24 : 16,
+    marginBottom: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
@@ -934,6 +952,29 @@ const styles = StyleSheet.create({
     fontSize: isTablet ? 14 : 12,
     color: colors.textSecondary,
     lineHeight: isTablet ? 20 : 16,
+  },
+  logoutSection: {
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.error,
+    borderRadius: 12,
+    paddingHorizontal: isTablet ? 24 : 20,
+    paddingVertical: isTablet ? 16 : 12,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  logoutButtonText: {
+    color: colors.text,
+    fontSize: isTablet ? 16 : 14,
+    fontWeight: 'bold',
   },
   modalOverlay: {
     flex: 1,
