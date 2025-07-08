@@ -23,6 +23,7 @@ const queryClient = new QueryClient({
     queries: {
       retry: Platform.OS === 'web' ? 3 : 1,
       staleTime: 1000 * 60 * 5, // 5 minutes
+      refetchOnWindowFocus: false,
     },
   },
 });
@@ -70,7 +71,7 @@ function RootLayoutNav() {
         },
         headerTintColor: colors.text,
         headerTitleStyle: {
-          fontWeight: 'bold',
+          fontWeight: 'bold' as const,
         },
         contentStyle: {
           backgroundColor: colors.background,
