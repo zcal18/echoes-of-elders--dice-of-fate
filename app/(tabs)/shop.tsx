@@ -153,6 +153,7 @@ export default function ShopScreen() {
       <Stack.Screen 
         options={{
           title: 'Shop',
+          headerShown: true,
         }}
       />
       
@@ -219,7 +220,6 @@ export default function ShopScreen() {
                 key={item.id}
                 style={[
                   styles.itemCard,
-                  item.featured && styles.featuredItem,
                   !canAffordItem(item) && styles.unaffordableItem
                 ]}
                 onPress={() => handlePurchase(item)}
@@ -234,11 +234,6 @@ export default function ShopScreen() {
                   >
                     {item.item.name}
                   </Text>
-                  {item.featured && (
-                    <View style={styles.featuredBadge}>
-                      <Text style={styles.featuredText}>★</Text>
-                    </View>
-                  )}
                 </View>
                 
                 <Text style={styles.itemDescription} numberOfLines={2}>
@@ -436,10 +431,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  featuredItem: {
-    borderColor: colors.secondary,
-    backgroundColor: colors.surface + 'DD',
-  },
   unaffordableItem: {
     opacity: 0.6,
   },
@@ -453,18 +444,6 @@ const styles = StyleSheet.create({
     fontSize: isTablet ? 16 : 14,
     fontWeight: 'bold',
     flex: 1,
-  },
-  featuredBadge: {
-    backgroundColor: colors.secondary,
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginLeft: 8,
-  },
-  featuredText: {
-    fontSize: isTablet ? 10 : 8,
-    fontWeight: 'bold',
-    color: colors.text,
   },
   itemDescription: {
     fontSize: isTablet ? 14 : 12,
@@ -568,6 +547,18 @@ const styles = StyleSheet.create({
   },
   packageName: {
     fontSize: isTablet ? 20 : 18,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  featuredBadge: {
+    backgroundColor: colors.secondary,
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  featuredText: {
+    fontSize: isTablet ? 10 : 8,
     fontWeight: 'bold',
     color: colors.text,
   },

@@ -60,8 +60,8 @@ function HeaderIcons() {
     <View style={{
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
-      marginRight: 8,
+      gap: 12,
+      marginRight: 16,
     }}>
       {/* Connection status indicator - only show on chat tab */}
       {isChatTab && (
@@ -69,9 +69,10 @@ function HeaderIcons() {
           flexDirection: 'row',
           alignItems: 'center',
           backgroundColor: colors.surface,
-          borderRadius: 8,
-          padding: 8,
-          marginRight: 4,
+          borderRadius: 12,
+          paddingHorizontal: 12,
+          paddingVertical: 8,
+          marginRight: 8,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.1,
@@ -82,7 +83,8 @@ function HeaderIcons() {
             width: 8,
             height: 8,
             borderRadius: 4,
-            backgroundColor: connectionStatus === 'connected' ? colors.success : colors.error,
+            backgroundColor: connectionStatus === 'connected' ? '#10B981' : '#EF4444',
+            marginRight: 6,
           }} />
         </View>
       )}
@@ -90,8 +92,8 @@ function HeaderIcons() {
       <TouchableOpacity 
         style={{
           backgroundColor: colors.surface,
-          borderRadius: 8,
-          padding: 8,
+          borderRadius: 12,
+          padding: 12,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.1,
@@ -100,13 +102,14 @@ function HeaderIcons() {
         }}
         onPress={() => router.push('/(tabs)/inbox')}
       >
-        <Mail size={20} color={colors.text} />
+        <Mail size={22} color={colors.text} />
       </TouchableOpacity>
+      
       <TouchableOpacity 
         style={{
           backgroundColor: colors.surface,
-          borderRadius: 8,
-          padding: 8,
+          borderRadius: 12,
+          padding: 12,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.1,
@@ -115,13 +118,14 @@ function HeaderIcons() {
         }}
         onPress={() => router.push('/(tabs)/shop')}
       >
-        <ShoppingCart size={20} color={colors.text} />
+        <ShoppingCart size={22} color={colors.text} />
       </TouchableOpacity>
+      
       <TouchableOpacity 
         style={{
           backgroundColor: colors.surface,
-          borderRadius: 8,
-          padding: 8,
+          borderRadius: 12,
+          padding: 12,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.1,
@@ -130,7 +134,7 @@ function HeaderIcons() {
         }}
         onPress={() => router.push('/(tabs)/profile')}
       >
-        <User size={20} color={colors.text} />
+        <User size={22} color={colors.text} />
       </TouchableOpacity>
     </View>
   );

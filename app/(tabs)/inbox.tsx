@@ -97,11 +97,11 @@ export default function InboxScreen() {
       <Stack.Screen 
         options={{
           title: 'Inbox',
+          headerShown: true,
         }}
       />
       
       <View style={styles.header}>
-        <Text style={styles.title}>📬 Inbox</Text>
         <TouchableOpacity 
           style={styles.composeButton}
           onPress={() => setShowCompose(true)}
@@ -253,14 +253,9 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     marginBottom: 16,
-  },
-  title: {
-    fontSize: isTablet ? 28 : 24,
-    fontWeight: 'bold',
-    color: colors.text,
   },
   composeButton: {
     flexDirection: 'row',

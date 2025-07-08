@@ -256,11 +256,7 @@ export default function ProfileScreen() {
     buffs: transformBuffs(activeCharacter.buffs || []),
     debuffs: transformDebuffs(activeCharacter.debuffs || []),
     profileImage: activeCharacter.profileImage,
-    lastDiceRoll: activeCharacter.lastDiceRoll ? {
-      ...activeCharacter.lastDiceRoll,
-      diceType: activeCharacter.lastDiceRoll.diceType || 20,
-      modifier: activeCharacter.lastDiceRoll.modifier || 0
-    } : undefined,
+    lastDiceRoll: undefined,
     customRace: activeCharacter.customRace,
     customClass: activeCharacter.customClass
   };
@@ -270,6 +266,7 @@ export default function ProfileScreen() {
       <Stack.Screen 
         options={{
           title: 'Profile',
+          headerShown: true,
         }}
       />
       
@@ -967,7 +964,7 @@ const styles = StyleSheet.create({
   },
   experienceProgress: {
     height: '100%',
-    backgroundColor: colors.experience,
+    backgroundColor: '#10B981',
     borderRadius: isTablet ? 8 : 6,
   },
   experienceText: {
