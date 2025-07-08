@@ -2,16 +2,13 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
-import { View, Platform, TouchableOpacity } from "react-native";
-import { useRouter, usePathname } from "expo-router";
-import { Mail, ShoppingCart, User } from 'lucide-react-native';
+import { View, Platform } from "react-native";
 import colors from "@/constants/colors";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { trpc, trpcClient, getWebSocketStatus } from "@/lib/trpc";
+import { trpc, trpcClient } from "@/lib/trpc";
 import NotificationSystem from "@/components/NotificationSystem";
-import { useGameStore } from "@/hooks/useGameStore";
 
 export const unstable_settings = {
   initialRouteName: "(tabs)",
@@ -30,115 +27,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-function HeaderIcons() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const { isAuthenticated } = useGameStore();
-  const [connectionStatus, setConnectionStatus] = useState<string>('disconnected');
-  
-  // Update connection status periodically
-  useEffect(() => {
-    const updateStatus = () => {
-      const status = getWebSocketStatus();
-      setConnectionStatus(status);
-    };
-    
-    // Initial check
-    updateStatus();
-    
-    // Update every second
-    const interval = setInterval(updateStatus, 1000);
-    return () => clearInterval(interval);
-  }, []);
-  
-  if (!isAuthenticated) return null;
-  
-  const isChatTab = pathname === '/(tabs)/chat' || pathname === '/chat';
-  
-  return (
-    <View style={{
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      marginRight: 16,
-    }}>
-      {/* Connection status indicator - only show on chat tab */}
-      {isChatTab && (
-        <View style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          backgroundColor: colors.surface,
-          borderRadius: 12,
-          paddingHorizontal: 12,
-          paddingVertical: 8,
-          marginRight: 8,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
-          elevation: 2,
-        }}>
-          <View style={{
-            width: 8,
-            height: 8,
-            borderRadius: 4,
-            backgroundColor: connectionStatus === 'connected' ? '#10B981' : '#EF4444',
-            marginRight: 6,
-          }} />
-        </View>
-      )}
-      
-      <TouchableOpacity 
-        style={{
-          backgroundColor: colors.surface,
-          borderRadius: 12,
-          padding: 12,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
-          elevation: 2,
-        }}
-        onPress={() => router.push('/(tabs)/inbox')}
-      >
-        <Mail size={22} color={colors.text} />
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={{
-          backgroundColor: colors.surface,
-          borderRadius: 12,
-          padding: 12,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
-          elevation: 2,
-        }}
-        onPress={() => router.push('/(tabs)/shop')}
-      >
-        <ShoppingCart size={22} color={colors.text} />
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={{
-          backgroundColor: colors.surface,
-          borderRadius: 12,
-          padding: 12,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
-          elevation: 2,
-        }}
-        onPress={() => router.push('/(tabs)/profile')}
-      >
-        <User size={22} color={colors.text} />
-      </TouchableOpacity>
-    </View>
-  );
-}
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -178,17 +66,10 @@ function RootLayoutNav() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: {
-          backgroundColor: colors.surface,
-        },
-        headerTintColor: colors.text,
-        headerTitleStyle: {
-          fontWeight: 'bold' as const,
-        },
+        headerShown: false,
         contentStyle: {
           backgroundColor: colors.background,
         },
-        headerRight: () => <HeaderIcons />,
       }}
     >
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
@@ -196,8 +77,7 @@ function RootLayoutNav() {
       <Stack.Screen 
         name="character-creation" 
         options={{ 
-          title: "Create Character",
-          headerBackTitle: "Back",
+          headerShown: false,
           presentation: "modal",
         }} 
       />

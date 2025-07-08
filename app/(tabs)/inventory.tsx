@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Stack } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGameStore } from '@/hooks/useGameStore';
 import InventorySystem from '@/components/Game/InventorySystem';
 import EquipmentSystem from '@/components/Game/EquipmentSystem';
@@ -29,12 +29,10 @@ export default function InventoryScreen() {
   }
   
   return (
-    <View style={styles.container}>
-      <Stack.Screen 
-        options={{
-          title: 'Inventory',
-        }}
-      />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Inventory</Text>
+      </View>
       
       <View style={styles.tabsContainer}>
         <TouchableOpacity
@@ -72,12 +70,14 @@ export default function InventoryScreen() {
         </TouchableOpacity>
       </View>
       
-      {activeTab === 'inventory' ? (
-        <InventorySystem />
-      ) : (
-        <EquipmentSystem />
-      )}
-    </View>
+      <View style={styles.content}>
+        {activeTab === 'inventory' ? (
+          <InventorySystem />
+        ) : (
+          <EquipmentSystem />
+        )}
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -85,14 +85,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    padding: 16,
+  },
+  header: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.surfaceDark,
+  },
+  title: {
+    fontSize: isTablet ? 24 : 20,
+    fontWeight: 'bold',
+    color: colors.text,
+    textAlign: 'center',
   },
   tabsContainer: {
     flexDirection: 'row',
     backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 4,
-    marginBottom: 16,
+    margin: 16,
   },
   tab: {
     flex: 1,
@@ -112,5 +124,9 @@ const styles = StyleSheet.create({
   activeTabText: {
     color: colors.text,
     fontWeight: 'bold',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 16,
   },
 });

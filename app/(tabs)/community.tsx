@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, Dimensions } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useGameStore } from '@/hooks/useGameStore';
 import colors from '@/constants/colors';
 import { Users, UserPlus, Crown, Shield, MessageSquare, Plus, X, Map, Swords } from 'lucide-react-native';
@@ -44,9 +45,14 @@ export default function CommunityScreen() {
   
   if (!activeCharacter) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.emptyText}>No character selected</Text>
-      </View>
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Community</Text>
+        </View>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No character selected</Text>
+        </View>
+      </SafeAreaView>
     );
   }
   
@@ -464,8 +470,10 @@ export default function CommunityScreen() {
   };
   
   return (
-    <View style={styles.container}>
-      <Stack.Screen options={{ title: 'Community' }} />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Community</Text>
+      </View>
       
       {/* Tab Navigation */}
       <View style={styles.tabNavigation}>
@@ -636,7 +644,7 @@ export default function CommunityScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -644,6 +652,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  header: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.surfaceDark,
+  },
+  title: {
+    fontSize: isTablet ? 24 : 20,
+    fontWeight: 'bold',
+    color: colors.text,
+    textAlign: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
   emptyText: {
     color: colors.textSecondary,

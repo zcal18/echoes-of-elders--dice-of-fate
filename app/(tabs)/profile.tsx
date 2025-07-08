@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Alert, Modal, Platform, Dimensions } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Settings, Users } from 'lucide-react-native';
 import { useGameStore } from '@/hooks/useGameStore';
 import colors from '@/constants/colors';
@@ -43,15 +44,20 @@ export default function ProfileScreen() {
   
   if (!activeCharacter) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.emptyText}>No character selected</Text>
-        <TouchableOpacity 
-          style={styles.createButton}
-          onPress={() => router.push('/character-creation')}
-        >
-          <Text style={styles.createButtonText}>Create Character</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Profile</Text>
+        </View>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No character selected</Text>
+          <TouchableOpacity 
+            style={styles.createButton}
+            onPress={() => router.push('/character-creation')}
+          >
+            <Text style={styles.createButtonText}>Create Character</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
   
@@ -262,13 +268,10 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen 
-        options={{
-          title: 'Profile',
-          headerShown: true,
-        }}
-      />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Profile</Text>
+      </View>
       
       <ScrollView contentContainerStyle={styles.content}>
         {/* Character Header */}
@@ -709,7 +712,7 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -717,6 +720,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  header: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.surfaceDark,
+  },
+  title: {
+    fontSize: isTablet ? 24 : 20,
+    fontWeight: 'bold',
+    color: colors.text,
+    textAlign: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
   content: {
     padding: isTablet ? 24 : 16,
