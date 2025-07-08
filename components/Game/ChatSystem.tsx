@@ -10,7 +10,12 @@ import { connectWebSocket, disconnectWebSocket, sendWebSocketMessage, getWebSock
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const isTablet = screenWidth > 768;
 const isMobile = screenWidth < 768;
-const SIDEBAR_WIDTH = Platform.OS === 'web' ? (isMobile ? screenWidth * 0.85 : 280) : screenWidth * 0.75;
+const isDesktop = Platform.OS === 'web' && screenWidth > 1024;
+
+// Adjusted sidebar widths for better desktop experience
+const SIDEBAR_WIDTH = Platform.OS === 'web' ? 
+  (isMobile ? screenWidth * 0.85 : isDesktop ? 240 : 280) : 
+  screenWidth * 0.75;
 
 const EMOTES = [
   '😀', '😂', '😍', '😎', '🤔', '😢', '😡', '🤯',
@@ -488,7 +493,9 @@ export default function ChatSystem() {
         <View style={[
           styles.chatArea,
           Platform.OS === 'web' && !isMobile && sidebarVisible && { marginLeft: SIDEBAR_WIDTH },
-          Platform.OS === 'web' && !isMobile && membersSidebarVisible && { marginRight: SIDEBAR_WIDTH }
+          Platform.OS === 'web' && !isMobile && membersSidebarVisible && { marginRight: SIDEBAR_WIDTH },
+          // Enhanced width utilization for desktop
+          isDesktop && styles.desktopChatArea
         ]}>
           {/* Chat Header */}
           <View style={styles.chatHeader}>
@@ -542,7 +549,7 @@ export default function ChatSystem() {
           {/* Messages Area */}
           <ScrollView
             ref={scrollViewRef}
-            style={styles.messageList}
+            style={[styles.messageList, isDesktop && styles.desktopMessageList]}
             onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
             showsVerticalScrollIndicator={false}
           >
@@ -555,7 +562,8 @@ export default function ChatSystem() {
           {/* Enhanced Input Container for Desktop/Mobile */}
           <View style={[
             styles.inputContainer,
-            Platform.OS === 'web' && !isMobile && styles.desktopInputContainer
+            Platform.OS === 'web' && !isMobile && styles.desktopInputContainer,
+            isDesktop && styles.desktopInputContainerWide
           ]}>
             {/* Inline Input Controls */}
             <View style={[
@@ -587,6 +595,7 @@ export default function ChatSystem() {
               style={[
                 styles.compactInput,
                 Platform.OS === 'web' && !isMobile && styles.desktopInput,
+                isDesktop && styles.desktopInputWide,
                 { color: selectedColor }
               ]}
               value={message}
@@ -874,6 +883,11 @@ const styles = StyleSheet.create({
     display: 'flex',
     flexDirection: 'column',
   },
+  // Enhanced desktop chat area for wider layout
+  desktopChatArea: {
+    maxWidth: 'none',
+    minWidth: 600, // Ensure minimum width for desktop
+  },
   chatHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -918,6 +932,10 @@ const styles = StyleSheet.create({
   messageList: {
     flex: 1,
     padding: 16,
+  },
+  // Enhanced desktop message list for wider content
+  desktopMessageList: {
+    paddingHorizontal: 24, // More padding for desktop
   },
   membersPanel: {
     borderLeftWidth: 1,
@@ -976,6 +994,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: colors.surface,
     marginBottom: 8,
+    // Enhanced width utilization for messages
+    width: '100%',
   },
   messageHeader: {
     flexDirection: 'row',
@@ -992,6 +1012,7 @@ const styles = StyleSheet.create({
   },
   messageContent: {
     color: colors.text,
+    lineHeight: 20,
   },
   emoteContent: {
     fontStyle: 'italic',
@@ -1050,6 +1071,11 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 12,
   },
+  // Enhanced desktop input container for wider layout
+  desktopInputContainerWide: {
+    paddingHorizontal: 24, // More padding for desktop
+    gap: 16,
+  },
   inlineInputControls: {
     flexDirection: 'row',
     gap: 3,
@@ -1090,6 +1116,12 @@ const styles = StyleSheet.create({
     maxHeight: 80,
     minHeight: 40,
     fontSize: 16,
+  },
+  // Enhanced desktop input for wider layout
+  desktopInputWide: {
+    minHeight: 44,
+    fontSize: 16,
+    paddingHorizontal: 16,
   },
   compactSendButton: {
     backgroundColor: colors.primary,
