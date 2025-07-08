@@ -9,6 +9,12 @@ export const createContext = async (opts: FetchCreateContextFnOptions) => {
   const userId = opts.req.headers.get('x-user-id');
   const userName = opts.req.headers.get('x-user-name');
   
+  console.log('Creating context with headers:', {
+    authHeader: !!authHeader,
+    userId,
+    userName
+  });
+  
   return {
     req: opts.req,
     // Add authentication context
@@ -48,6 +54,12 @@ export const publicProcedure = t.procedure;
 
 // Protected procedure for authenticated users
 export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
+  console.log('Protected procedure check:', {
+    hasUser: !!ctx.user,
+    isAuthenticated: ctx.user?.isAuthenticated,
+    userId: ctx.user?.id
+  });
+  
   // Check if user is authenticated
   if (!ctx.user?.isAuthenticated) {
     throw new Error('Unauthorized: Please log in to access this feature');

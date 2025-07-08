@@ -16,14 +16,35 @@ const getBaseUrl = () => {
   );
 };
 
+// Store authentication info globally
+let currentUserId: string | null = null;
+let currentUserName: string | null = null;
+
+export const setAuthInfo = (userId: string | null, userName: string | null) => {
+  currentUserId = userId;
+  currentUserName = userName;
+};
+
 export const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
       url: `${getBaseUrl()}/api/trpc`,
       transformer: superjson,
-      headers: () => ({
-        'Content-Type': 'application/json',
-      }),
+      headers: () => {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        
+        // Add authentication headers if available
+        if (currentUserId) {
+          headers['x-user-id'] = currentUserId;
+        }
+        if (currentUserName) {
+          headers['x-user-name'] = currentUserName;
+        }
+        
+        return headers;
+      },
     }),
   ],
 });

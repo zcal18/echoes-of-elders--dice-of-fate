@@ -4,7 +4,7 @@ import { useGameStore } from '@/hooks/useGameStore';
 import colors from '@/constants/colors';
 import { ChatMessage, ChatLobby, OnlineUser } from '@/types/game';
 import { MessageSquare, Plus, X, ChevronLeft, ChevronRight, Smile, ExternalLink, Minimize2, Users, Type, Palette, Activity, Send, Menu } from 'lucide-react-native';
-import { trpc } from '@/lib/trpc';
+import { trpc, setAuthInfo } from '@/lib/trpc';
 import { connectWebSocket, disconnectWebSocket, sendWebSocketMessage, getWebSocketConnection, getWebSocketStatus } from '@/lib/trpc';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -99,6 +99,15 @@ export default function ChatSystem() {
     currentMembers.includes(user.id) && user.channelId === activeChannel
   );
   
+  // Set authentication info for TRPC
+  useEffect(() => {
+    if (activeCharacter && isAuthenticated) {
+      setAuthInfo(activeCharacter.id, activeCharacter.name);
+    } else {
+      setAuthInfo(null, null);
+    }
+  }, [activeCharacter, isAuthenticated]);
+  
   // Monitor connection status
   useEffect(() => {
     const updateStatus = () => {
@@ -136,6 +145,7 @@ export default function ChatSystem() {
                 break;
               case 'error':
                 console.error('WebSocket error from server:', data.message);
+                addNotification(`Chat error: ${data.message}`, 'error');
                 break;
               case 'pvpMatchFound':
                 addNotification('PVP match found!', 'success');
@@ -153,16 +163,21 @@ export default function ChatSystem() {
         
         ws.onerror = (error) => {
           console.error('WebSocket error in ChatSystem:', error);
+          addNotification('Connection error. Retrying...', 'error');
         };
         
         ws.onopen = () => {
           console.log('WebSocket connected successfully');
           setConnectionStatus('connected');
+          addNotification('Connected to chat', 'success');
         };
         
         ws.onclose = (event) => {
           console.log('WebSocket connection closed:', event.code, event.reason);
           setConnectionStatus('disconnected');
+          if (event.code !== 1000) {
+            addNotification('Disconnected from chat', 'error');
+          }
         };
       }
       
@@ -276,7 +291,7 @@ export default function ChatSystem() {
       setMessage("");
     } catch (error) {
       console.error('Failed to send message:', error);
-      addNotification('Failed to send message', 'error');
+      addNotification('Failed to send message. Please check your connection.', 'error');
     }
   };
 
@@ -982,10 +997,10 @@ const styles = StyleSheet.create({
   },
   messageList: {
     flex: 1,
-    padding: 4,
+    padding: 8,
   },
   desktopMessageList: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 12,
   },
   noMessagesContainer: {
     flex: 1,
@@ -1120,7 +1135,7 @@ const styles = StyleSheet.create({
   // Input Container Styles
   inputContainer: {
     flexDirection: 'row',
-    padding: 4,
+    padding: 8,
     gap: 6,
     borderTopWidth: 1,
     borderTopColor: colors.surfaceLight,
@@ -1128,11 +1143,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   desktopInputContainer: {
-    padding: 6,
+    padding: 12,
     gap: 12,
   },
   desktopInputContainerWide: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 16,
     gap: 16,
   },
   inlineInputControls: {
