@@ -174,6 +174,8 @@ export interface Enemy {
   resistances?: string[];
   imageUrl?: string;
   image?: string;
+  profileImage?: string;
+  environment?: string;
   lore?: string;
 }
 
