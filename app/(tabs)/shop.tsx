@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Dimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Package, Gem, Minus, Plus } from 'lucide-react-native';
 import { useGameStore } from '@/hooks/useGameStore';
@@ -149,7 +150,7 @@ export default function ShopScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Currency Display */}
       <View style={styles.currencyBar}>
         <View style={styles.currencyItem}>
@@ -314,7 +315,7 @@ export default function ShopScreen() {
           </View>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

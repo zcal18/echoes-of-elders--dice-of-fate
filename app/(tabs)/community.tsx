@@ -39,16 +39,13 @@ export default function CommunityScreen() {
     removeFriend
   } = useGameStore();
   
-  const createGuildChannelMutation = trpc.chat.createGuildChannel.useMutation();
-  const joinGuildChannelMutation = trpc.chat.joinGuildChannel.useMutation();
-  const leaveGuildChannelMutation = trpc.chat.leaveGuildChannel.useMutation();
+  const createChannelMutation = trpc.chat.createChannel.useMutation();
+  const joinChannelMutation = trpc.chat.joinChannel.useMutation();
+  const leaveChannelMutation = trpc.chat.leaveChannel.useMutation();
   
   if (!activeCharacter) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Community</Text>
-        </View>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No character selected</Text>
         </View>
@@ -73,7 +70,7 @@ export default function CommunityScreen() {
     // Create guild chat channel
     try {
       const newGuildId = Date.now().toString(); // This should match the guild ID from createGuild
-      await createGuildChannelMutation.mutateAsync({
+      await createChannelMutation.mutateAsync({
         guildId: newGuildId,
         guildName: guildName.trim(),
         guildTag: guildTag.trim().toUpperCase(),
@@ -130,7 +127,7 @@ export default function CommunityScreen() {
     
     // Join guild chat channel
     try {
-      await joinGuildChannelMutation.mutateAsync({
+      await joinChannelMutation.mutateAsync({
         guildId,
         userId: activeCharacter.id
       });
@@ -157,7 +154,7 @@ export default function CommunityScreen() {
             
             // Leave guild chat channel
             try {
-              await leaveGuildChannelMutation.mutateAsync({
+              await leaveChannelMutation.mutateAsync({
                 guildId,
                 userId: activeCharacter.id
               });
@@ -471,10 +468,6 @@ export default function CommunityScreen() {
   
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Community</Text>
-      </View>
-      
       {/* Tab Navigation */}
       <View style={styles.tabNavigation}>
         <TouchableOpacity 
@@ -652,19 +645,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  header: {
-    backgroundColor: colors.surface,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.surfaceDark,
-  },
-  title: {
-    fontSize: isTablet ? 24 : 20,
-    fontWeight: 'bold',
-    color: colors.text,
-    textAlign: 'center',
   },
   emptyContainer: {
     flex: 1,
