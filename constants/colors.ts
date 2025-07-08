@@ -22,31 +22,29 @@ export default {
   
   // Status colors
   success: '#10B981',
-  successLight: '#34D399',
-  successDark: '#059669',
-  
   error: '#EF4444',
-  errorLight: '#F87171',
-  errorDark: '#DC2626',
-  
   warning: '#F59E0B',
-  warningLight: '#FCD34D',
-  warningDark: '#D97706',
-  
   info: '#3B82F6',
-  infoLight: '#60A5FA',
-  infoDark: '#2563EB',
   
   // Utility colors
   white: '#FFFFFF',
   black: '#000000',
   transparent: 'transparent',
   
+  // Border colors
+  border: '#334155',
+  borderLight: '#475569',
+  borderDark: '#1E293B',
+  
+  // Additional semantic colors
+  accent: '#EC4899',
+  muted: '#6B7280',
+  destructive: '#DC2626',
+  
   // Game-specific colors
-  health: '#EF4444',
-  mana: '#3B82F6',
-  experience: '#10B981',
-  gold: '#F59E0B',
+  gold: '#FCD34D',
+  silver: '#E5E7EB',
+  bronze: '#D97706',
   
   // Rarity colors
   common: '#9CA3AF',
@@ -54,9 +52,5 @@ export default {
   rare: '#3B82F6',
   epic: '#8B5CF6',
   legendary: '#F59E0B',
-  
-  // Border colors
-  border: '#374151',
-  borderLight: '#4B5563',
-  borderDark: '#1F2937',
+  mythic: '#EF4444',
 };

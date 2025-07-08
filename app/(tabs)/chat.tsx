@@ -1,18 +1,54 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Stack } from 'expo-router';
 import ChatSystem from '@/components/Game/ChatSystem';
 import { useGameStore } from '@/hooks/useGameStore';
+import { getWebSocketStatus } from '@/lib/trpc';
 import colors from '@/constants/colors';
 
 export default function ChatScreen() {
   const { chatPopout } = useGameStore();
+  const [connectionStatus, setConnectionStatus] = useState<string>('disconnected');
+  
+  // Update connection status periodically
+  useEffect(() => {
+    const updateStatus = () => {
+      const status = getWebSocketStatus();
+      setConnectionStatus(status);
+    };
+    
+    // Initial check
+    updateStatus();
+    
+    // Update every second
+    const interval = setInterval(updateStatus, 1000);
+    return () => clearInterval(interval);
+  }, []);
+  
+  // Connection status indicator component
+  const ConnectionIndicator = () => (
+    <View style={styles.connectionContainer}>
+      <View style={[
+        styles.connectionDot, 
+        { backgroundColor: connectionStatus === 'connected' ? colors.success : colors.warning }
+      ]} />
+      <Text style={styles.connectionText}>
+        {connectionStatus === 'connected' ? 'Online' : 'Offline'}
+      </Text>
+    </View>
+  );
   
   // If chat is popped out, don't render it in the tab
   if (chatPopout) {
     return (
       <View style={styles.container}>
-        <Stack.Screen options={{ title: 'Chat', headerShown: false }} />
+        <Stack.Screen 
+          options={{ 
+            title: 'Chat', 
+            headerShown: true,
+            headerRight: () => <ConnectionIndicator />
+          }} 
+        />
         <View style={styles.popoutMessage}>
           <Text style={styles.popoutText}>Chat is currently popped out</Text>
           <Text style={styles.popoutSubtext}>Close the pop-out window to use chat here</Text>
@@ -23,7 +59,13 @@ export default function ChatScreen() {
   
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: 'Chat', headerShown: false }} />
+      <Stack.Screen 
+        options={{ 
+          title: 'Chat', 
+          headerShown: true,
+          headerRight: () => <ConnectionIndicator />
+        }} 
+      />
       <ChatSystem />
     </View>
   );
@@ -52,5 +94,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  connectionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16,
+    gap: 6,
+  },
+  connectionDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  connectionText: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '500',
   },
 });

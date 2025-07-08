@@ -33,8 +33,7 @@ const TEXT_COLORS = [
 
 export default function ChatSystem() {
   const { 
-    chatMessages, 
-    activeChannel, 
+    activeChannel,
     activeCharacter,
     chatLobbies,
     userRole,
@@ -67,7 +66,6 @@ export default function ChatSystem() {
   const [selectedColor, setSelectedColor] = useState(TEXT_COLORS[0].value);
   const [isEmoteMode, setIsEmoteMode] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
-  const [connectionStatus, setConnectionStatus] = useState<string>('disconnected');
   
   const scrollViewRef = useRef<ScrollView>(null);
   const textInputRef = useRef<TextInput>(null);
@@ -90,8 +88,6 @@ export default function ChatSystem() {
     if (activeCharacter && Platform.OS === 'web') {
       const ws = connectWebSocket(activeCharacter.id, activeCharacter.name, activeChannel);
       if (ws) {
-        setConnectionStatus('connecting');
-        
         ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
@@ -126,19 +122,16 @@ export default function ChatSystem() {
         ws.onerror = (error) => {
           console.error('WebSocket error:', error);
           setSubscriptionError(null); // Don't show error to user
-          setConnectionStatus('disconnected');
         };
         
         ws.onopen = () => {
-          setConnectionStatus('connected');
           setSubscriptionError(null);
         };
         
         ws.onclose = () => {
-          setConnectionStatus('disconnected');
+          // Connection closed
         };
       } else {
-        setConnectionStatus('disconnected');
         setSubscriptionError(null); // Don't show error to user
       }
       
@@ -149,20 +142,9 @@ export default function ChatSystem() {
       if (activeCharacter) {
         disconnectWebSocket(activeCharacter.id);
         disconnectFromChat(activeCharacter.id);
-        setConnectionStatus('disconnected');
       }
     };
   }, [activeCharacter]);
-
-  // Update connection status periodically
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const status = getWebSocketStatus();
-      setConnectionStatus(status);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
 
   // Join channel when active channel changes
   useEffect(() => {
@@ -438,16 +420,6 @@ export default function ChatSystem() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={[styles.container, chatPopout && Platform.OS === 'web' && styles.popoutContainer]}>
-        {/* Connection Status - Only show on web and when disconnected */}
-        {Platform.OS === 'web' && connectionStatus !== 'connected' && (
-          <View style={styles.connectionStatus}>
-            <View style={[styles.connectionIndicator, { backgroundColor: connectionStatus === 'connected' ? colors.success : colors.warning }]} />
-            <Text style={styles.connectionText}>
-              {connectionStatus === 'connecting' ? 'Connecting...' : 'Offline Mode'}
-            </Text>
-          </View>
-        )}
-        
         {/* Channels Sidebar */}
         <Animated.View 
           style={[
@@ -846,25 +818,9 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 20,
   },
-  connectionStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-    backgroundColor: colors.surface,
-    gap: 8,
-  },
-  connectionIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  connectionText: {
-    color: colors.textSecondary,
-    fontSize: 12,
-  },
   sidebar: {
     borderRightWidth: 1,
-    borderRightColor: colors.border,
+    borderRightColor: colors.surfaceLight,
     backgroundColor: colors.surface,
     height: '100%',
   },
@@ -874,7 +830,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.surfaceLight,
   },
   channelHeaderText: {
     fontSize: 16,
@@ -923,7 +879,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.surfaceLight,
     backgroundColor: colors.surface,
   },
   toggleSidebarButton: {
@@ -965,7 +921,7 @@ const styles = StyleSheet.create({
   },
   membersPanel: {
     borderLeftWidth: 1,
-    borderLeftColor: colors.border,
+    borderLeftColor: colors.surfaceLight,
     backgroundColor: colors.surface,
     padding: 12,
     height: '100%',
@@ -1086,7 +1042,7 @@ const styles = StyleSheet.create({
     padding: 8,
     gap: 6,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: colors.surfaceLight,
     alignItems: 'flex-end',
     backgroundColor: colors.surface,
   },
@@ -1125,7 +1081,7 @@ const styles = StyleSheet.create({
     maxHeight: 60,
     minHeight: 32,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.surfaceLight,
     fontSize: 14,
   },
   desktopInput: {

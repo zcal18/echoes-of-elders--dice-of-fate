@@ -1,3 +1,4 @@
+// Base types
 export interface Character {
   id: string;
   name: string;
@@ -28,12 +29,12 @@ export interface Character {
   gold: number;
   buffs: Buff[];
   debuffs: Debuff[];
+  familiar?: Familiar;
+  guildId?: string;
   customClass?: CustomClass;
   customRace?: CustomRace;
-  unlockedSpells: string[];
-  unlockedItems: string[];
-  guildId?: string;
-  familiar?: Familiar;
+  unlockedSpells?: string[];
+  unlockedItems?: string[];
   // Combat properties
   currentHealth: number;
   maxHealth: number;
@@ -41,46 +42,14 @@ export interface Character {
   damageDie: number;
 }
 
-export interface CreateCharacterInput {
-  name: string;
-  race: string;
-  class: string;
-  profileImage?: string;
-  customClass?: CustomClass;
-  customRace?: CustomRace;
-}
-
-export interface CustomClass {
-  name: string;
-  description: string;
-  primaryStat: string;
-  abilities: string[];
-  startingEquipment: string[];
-  lore: string;
-}
-
-export interface CustomRace {
-  name: string;
-  description: string;
-  statBonuses: {
-    strength: number;
-    dexterity: number;
-    constitution: number;
-    intelligence: number;
-    wisdom: number;
-    charisma: number;
-  };
-  abilities: string[];
-  lore: string;
-}
-
 export interface Item {
   id: string;
   name: string;
   description: string;
-  type: 'weapon' | 'armor' | 'potion' | 'tool' | 'misc';
-  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+  type: 'weapon' | 'armor' | 'potion' | 'accessory' | 'tool' | 'material' | 'quest';
+  rarity?: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
   value: number;
+  icon?: string;
   equipSlot?: string;
   stats?: {
     [key: string]: number;
@@ -88,17 +57,19 @@ export interface Item {
   boost?: {
     [key: string]: number;
   };
-  effects?: {
-    type: string;
-    value: number;
-  }[];
+  effects?: ItemEffect[];
   stackable?: boolean;
   quantity?: number;
-  icon?: string;
+}
+
+export interface ItemEffect {
+  type: 'heal' | 'mana' | 'buff' | 'debuff' | 'revive';
+  value: number;
+  duration?: number;
 }
 
 export interface Equipment {
-  [key: string]: Item;
+  [slot: string]: Item;
 }
 
 export interface Buff {
@@ -107,7 +78,7 @@ export interface Buff {
   description: string;
   duration: number;
   effects: {
-    [key: string]: number;
+    [stat: string]: number;
   };
 }
 
@@ -117,35 +88,9 @@ export interface Debuff {
   description: string;
   duration: number;
   effects: {
-    [key: string]: number;
+    [stat: string]: number;
   };
 }
-
-export interface Enemy {
-  id: string;
-  name: string;
-  level: number;
-  health: number;
-  maxHealth: number;
-  attack: number;
-  defense: number;
-  experience: number;
-  gold: number;
-  loot: Item[];
-  requiredLevel: number;
-  description: string;
-  type: string;
-  abilities: string[];
-}
-
-export interface ShopItem {
-  id: string;
-  item: Item;
-  price: number;
-  stock: number;
-}
-
-export type FamiliarType = 'sprite' | 'raven' | 'wolf' | 'golem' | 'dragon' | 'phoenix';
 
 export interface Familiar {
   type: FamiliarType;
@@ -168,6 +113,53 @@ export interface Familiar {
     wisdom: number;
     charisma: number;
   };
+}
+
+export type FamiliarType = 'sprite' | 'raven' | 'wolf' | 'golem' | 'dragon' | 'phoenix';
+
+// Shop types
+export interface ShopItem {
+  id: string;
+  item: Item;
+  price: number;
+  stock: number;
+  category: 'weapons' | 'armor' | 'potions' | 'accessories' | 'materials';
+}
+
+// Enemy types
+export interface Enemy {
+  id: string;
+  name: string;
+  description: string;
+  level: number;
+  requiredLevel: number;
+  health: number;
+  attack: number;
+  defense: number;
+  experience: number;
+  goldReward: number;
+  loot?: Item[];
+  abilities?: string[];
+  weaknesses?: string[];
+  resistances?: string[];
+  image?: string;
+}
+
+// Social types
+export interface Guild {
+  id: string;
+  name: string;
+  clanTag: string;
+  description: string;
+  members: GuildMember[];
+  createdAt: number;
+  level: number;
+}
+
+export interface GuildMember {
+  id: string;
+  rank: 'Leader' | 'Officer' | 'Member';
+  joinedAt: number;
 }
 
 export interface Party {
@@ -196,40 +188,60 @@ export interface Friend {
   lastSeen: number;
 }
 
-export interface Guild {
+// Chat types
+export interface ChatMessage {
+  id: string;
+  sender: string;
+  content: string;
+  timestamp: number;
+  reactions?: MessageReaction[];
+  fontColor?: string;
+  messageType?: 'normal' | 'emote';
+}
+
+export interface MessageReaction {
+  emoji: string;
+  count: number;
+  users: string[];
+}
+
+export interface ChatLobby {
   id: string;
   name: string;
-  clanTag: string;
   description: string;
-  members: GuildMember[];
+  type: 'default' | 'user' | 'guild';
+  createdBy?: string;
   createdAt: number;
-  level: number;
+  members: string[];
+  messages: ChatMessage[];
+  isPrivate: boolean;
 }
 
-export interface GuildMember {
+export interface OnlineUser {
   id: string;
-  rank: string;
-  joinedAt: number;
+  name: string;
+  isOnline: boolean;
+  channelId?: string;
+  lastSeen: number;
 }
 
+// Territory types
 export interface Territory {
   id: string;
   name: string;
-  type: string;
-  position: {
-    x: number;
-    y: number;
-  };
+  type: 'plains' | 'forest' | 'mountain' | 'water' | 'desert' | 'castle';
+  position: { x: number; y: number };
   description: string;
   defenseStrength: number;
   strategicValue: number;
   resources: string[];
   lore: string;
-  isClaimable: boolean;
   controllingGuild?: string;
+  isClaimable: boolean;
   isRoyalSpire?: boolean;
 }
 
+// Guild Battle types
 export interface GuildBattle {
   id: string;
   territoryId: string;
@@ -243,6 +255,7 @@ export interface GuildBattle {
   currentTurn: string | null;
 }
 
+// Mail types
 export interface Mail {
   id: string;
   sender: string;
@@ -254,28 +267,30 @@ export interface Mail {
   isStarred: boolean;
 }
 
+// Research types
 export interface Research {
   id: string;
   name: string;
   description: string;
-  category: string;
-  duration: number;
+  category: 'combat' | 'magic' | 'crafting' | 'exploration';
+  duration: number; // in milliseconds
   requirements: {
     level: number;
     prerequisites?: string[];
   };
   rewards: {
     experience?: number;
-    statBoosts?: {
-      [key: string]: number;
-    };
     unlocks?: string[];
+    statBoosts?: {
+      [stat: string]: number;
+    };
   };
   isCompleted: boolean;
   startedAt?: number;
   completedAt?: number;
 }
 
+// PVP types
 export interface PvpPlayer {
   playerId: string;
   playerName: string;
@@ -296,44 +311,39 @@ export interface PvpMatch {
   player2: PvpPlayer;
   startTime: number;
   currentTurn: string;
-  status: 'active';
+  status: 'active' | 'completed';
 }
 
-export interface ChatMessage {
-  id: string;
-  content: string;
-  sender: string;
-  timestamp: number;
-  reactions: {
-    emoji: string;
-    count: number;
-    users: string[];
-  }[];
-  fontColor?: string;
-  messageType?: 'normal' | 'emote';
-  type?: 'message' | 'system' | 'announcement';
+// Character Creation types
+export interface CreateCharacterInput {
+  name: string;
+  race: string;
+  class: string;
+  profileImage?: string;
+  customRace?: CustomRace;
+  customClass?: CustomClass;
 }
 
-export interface ChatLobby {
-  id: string;
+export interface CustomRace {
   name: string;
   description: string;
-  type: 'default' | 'user' | 'guild';
-  createdBy?: string;
-  createdAt: number;
-  members: string[];
-  messages: ChatMessage[];
-  isPrivate: boolean;
+  statBonuses: {
+    [stat: string]: number;
+  };
+  abilities: string[];
+  lore: string;
 }
 
-export interface OnlineUser {
-  id: string;
+export interface CustomClass {
   name: string;
-  isOnline: boolean;
-  channelId: string;
-  lastSeen: number;
+  description: string;
+  primaryStat: string;
+  abilities: string[];
+  startingEquipment: string[];
+  lore: string;
 }
 
+// Notification types
 export interface Notification {
   id: string;
   message: string;
@@ -341,6 +351,7 @@ export interface Notification {
   timestamp: number;
 }
 
+// Main game state
 export interface GameState {
   // Authentication
   isAuthenticated: boolean;
@@ -376,7 +387,6 @@ export interface GameState {
   completedResearch: Research[];
   
   // Chat State
-  chatMessages: ChatMessage[];
   activeChannel: string;
   chatLobbies: ChatLobby[];
   chatPopout: boolean;
@@ -403,7 +413,7 @@ export interface GameState {
   login: (username: string) => void;
   
   // Character Functions
-  createCharacter: (characterInput: CreateCharacterInput) => void;
+  createCharacter: (character: CreateCharacterInput) => void;
   deleteCharacter: (characterId: string) => void;
   selectCharacter: (characterId: string) => void;
   updateCharacterProfileImage: (characterId: string, imageUrl: string) => void;
@@ -438,8 +448,11 @@ export interface GameState {
   
   // Combat Functions
   getAvailableEnemies: () => Enemy[];
+  
+  // Helper functions for stat calculation
   getBaseStats: (character: Character) => any;
   calculateTotalStats: (baseStats: any, equipment: any) => any;
+  
   startEnemyAttack: () => void;
   handleDefeat: () => void;
   
