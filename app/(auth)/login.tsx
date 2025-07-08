@@ -105,18 +105,18 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 24,
   },
   logo: {
-    width: 800,
-    height: 450,
+    width: 200,
+    height: 112,
     alignSelf: 'center',
   },
   form: {
-    gap: 20,
+    gap: 16,
   },
   inputContainer: {
-    gap: 8,
+    gap: 6,
   },
   label: {
     fontSize: 14,
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 8,
   },
   disabledButton: {
     opacity: 0.7,
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 32,
+    marginTop: 20,
     gap: 8,
   },
   footerText: {
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   forgotPassword: {
     color: colors.secondary,
     textAlign: 'center',
-    marginTop: 16,
+    marginTop: 12,
     fontSize: 14,
   },
 });
