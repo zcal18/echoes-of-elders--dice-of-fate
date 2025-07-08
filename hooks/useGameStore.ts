@@ -333,7 +333,6 @@ export const useGameStore = create<GameState>()(
       completedResearch: [],
       
       // Chat State (not persisted)
-      chatMessages: [],
       activeChannel: 'general',
       chatLobbies: [
         {
@@ -2264,7 +2263,6 @@ export const useGameStore = create<GameState>()(
           characters: [],
           activeCharacter: null,
           userRole: 'player',
-          chatMessages: [],
           activeChannel: 'general',
           activeParty: null,
           diamonds: 100,
