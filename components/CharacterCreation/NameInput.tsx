@@ -41,7 +41,7 @@ export default function NameInput({ name, onNameChange, onContinue }: NameInputP
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Name Your Character</Text>
-      <Text style={styles.subtitle}>Choose a name that will be known throughout Eldoria</Text>
+      <Text style={styles.subtitle}>Choose a name that will be known throughout Ryh'Din</Text>
       
       <View style={styles.inputContainer}>
         <TextInput

@@ -17,9 +17,9 @@ export default function ModalScreen() {
       </View>
       
       <ScrollView style={styles.content}>
-        <Text style={styles.sectionTitle}>Welcome to Eldoria</Text>
+        <Text style={styles.sectionTitle}>Welcome to Ryh'Din</Text>
         <Text style={styles.paragraph}>
-          Echoes of Elders: The Dice of Fate is a text-based MMORPG set in the mystical realm of Eldoria. 
+          Echoes of Elders: The Dice of Fate is a text-based MMORPG set in the mystical realm of Ryh'Din. 
           Embark on an epic journey, battle fearsome creatures, discover ancient artifacts, and forge your legend.
         </Text>
         
@@ -32,7 +32,7 @@ export default function ModalScreen() {
         
         <Text style={styles.sectionTitle}>How to Play</Text>
         <Text style={styles.paragraph}>
-          After creating your character, you can explore the world of Eldoria through the various tabs:
+          After creating your character, you can explore the world of Ryh'Din through the various tabs:
         </Text>
         <Text style={styles.listItem}>• Home: View your character stats and game news</Text>
         <Text style={styles.listItem}>• Chat: Communicate with other players</Text>
