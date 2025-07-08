@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, Dimensions } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useGameStore } from '@/hooks/useGameStore';
 import colors from '@/constants/colors';
-import { Users, UserPlus, Crown, Shield, MessageSquare, Plus, X } from 'lucide-react-native';
+import { Users, UserPlus, Crown, Shield, MessageSquare, Plus, X, Map, Swords } from 'lucide-react-native';
 import { trpc } from '@/lib/trpc';
 
 const { width: screenWidth } = Dimensions.get('window');
 const isTablet = screenWidth > 768;
 
 export default function CommunityScreen() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'guilds' | 'parties' | 'friends'>('guilds');
   const [showCreateGuildModal, setShowCreateGuildModal] = useState(false);
   const [showCreatePartyModal, setShowCreatePartyModal] = useState(false);
@@ -26,6 +27,8 @@ export default function CommunityScreen() {
     activeParty,
     friendsList,
     onlineFriends,
+    territories,
+    guildBattles,
     createGuild,
     joinGuild,
     leaveGuild,
@@ -185,6 +188,23 @@ export default function CommunityScreen() {
       ]
     );
   };
+
+  const getGuildTerritoryInfo = () => {
+    if (!activeCharacter.guildId) return null;
+    
+    const guildTerritories = territories.filter(t => t.controllingGuild === activeCharacter.guildId);
+    const activeBattles = guildBattles.filter(b => 
+      (b.attackingGuild.id === activeCharacter.guildId || b.defendingGuild?.id === activeCharacter.guildId) &&
+      (b.status === 'recruiting' || b.status === 'active')
+    );
+    
+    return {
+      territories: guildTerritories,
+      battles: activeBattles
+    };
+  };
+
+  const guildTerritoryInfo = getGuildTerritoryInfo();
   
   const renderGuilds = () => {
     const userGuild = guilds.find(g => g.id === activeCharacter.guildId);
@@ -201,6 +221,34 @@ export default function CommunityScreen() {
             <Plus size={20} color={colors.text} />
           </TouchableOpacity>
         </View>
+
+        {/* Kingdom Map Access */}
+        <TouchableOpacity 
+          style={styles.kingdomMapButton}
+          onPress={() => router.push('/(tabs)/kingdom')}
+        >
+          <View style={styles.kingdomMapContent}>
+            <View style={styles.kingdomMapHeader}>
+              <Map size={24} color={colors.text} />
+              <Text style={styles.kingdomMapTitle}>Kingdom Map</Text>
+            </View>
+            <Text style={styles.kingdomMapSubtitle}>
+              View territories, initiate guild battles, and claim the crown
+            </Text>
+            {guildTerritoryInfo && (
+              <View style={styles.kingdomMapStats}>
+                <Text style={styles.kingdomMapStat}>
+                  🏰 {guildTerritoryInfo.territories.length} territories controlled
+                </Text>
+                {guildTerritoryInfo.battles.length > 0 && (
+                  <Text style={styles.kingdomMapStat}>
+                    ⚔️ {guildTerritoryInfo.battles.length} active battles
+                  </Text>
+                )}
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
         
         {userGuild && (
           <View style={styles.currentSection}>
@@ -222,6 +270,9 @@ export default function CommunityScreen() {
               <View style={styles.guildStats}>
                 <Text style={styles.guildStat}>👥 {userGuild.members.length} members</Text>
                 <Text style={styles.guildStat}>⭐ Level {userGuild.level || 1}</Text>
+                {guildTerritoryInfo && (
+                  <Text style={styles.guildStat}>🏰 {guildTerritoryInfo.territories.length} territories</Text>
+                )}
               </View>
               <View style={styles.guildFeatures}>
                 <Text style={styles.guildFeatureTitle}>Guild Features:</Text>
@@ -230,6 +281,16 @@ export default function CommunityScreen() {
                 <Text style={styles.guildFeature}>• Shared guild resources</Text>
                 <Text style={styles.guildFeature}>• Guild ranking system</Text>
               </View>
+              {guildTerritoryInfo && guildTerritoryInfo.battles.length > 0 && (
+                <View style={styles.activeBattles}>
+                  <Text style={styles.activeBattlesTitle}>⚔️ Active Battles:</Text>
+                  {guildTerritoryInfo.battles.map(battle => (
+                    <Text key={battle.id} style={styles.activeBattle}>
+                      • {territories.find(t => t.id === battle.territoryId)?.name} ({battle.status})
+                    </Text>
+                  ))}
+                </View>
+              )}
             </View>
           </View>
         )}
@@ -256,6 +317,9 @@ export default function CommunityScreen() {
               <View style={styles.guildStats}>
                 <Text style={styles.guildStat}>👥 {guild.members.length} members</Text>
                 <Text style={styles.guildStat}>⭐ Level {guild.level || 1}</Text>
+                <Text style={styles.guildStat}>
+                  🏰 {territories.filter(t => t.controllingGuild === guild.id).length} territories
+                </Text>
               </View>
             </View>
           ))}
@@ -634,6 +698,46 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 8,
   },
+  kingdomMapButton: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: isTablet ? 16 : 12,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  kingdomMapContent: {
+    gap: 8,
+  },
+  kingdomMapHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  kingdomMapTitle: {
+    fontSize: isTablet ? 20 : 18,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  kingdomMapSubtitle: {
+    fontSize: isTablet ? 14 : 12,
+    color: colors.textSecondary,
+  },
+  kingdomMapStats: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 4,
+  },
+  kingdomMapStat: {
+    fontSize: isTablet ? 12 : 10,
+    color: colors.primary,
+    fontWeight: 'bold',
+  },
   currentSection: {
     marginBottom: 24,
   },
@@ -717,6 +821,23 @@ const styles = StyleSheet.create({
   guildFeature: {
     fontSize: isTablet ? 12 : 10,
     color: colors.textSecondary,
+    marginBottom: 2,
+  },
+  activeBattles: {
+    marginTop: 8,
+    padding: 8,
+    backgroundColor: colors.warning + '20',
+    borderRadius: 8,
+  },
+  activeBattlesTitle: {
+    fontSize: isTablet ? 14 : 12,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  activeBattle: {
+    fontSize: isTablet ? 12 : 10,
+    color: colors.text,
     marginBottom: 2,
   },
   joinButton: {
