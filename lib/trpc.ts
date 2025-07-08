@@ -52,8 +52,8 @@ export const connectWebSocket = (userId: string, userName: string, channelId: st
     
     wsConnection = new WebSocket(wsUrl);
     
-    wsConnection.onopen = () => {
-      console.log('WebSocket connected successfully');
+    wsConnection.onopen = (event) => {
+      console.log('WebSocket connected successfully', event);
       reconnectAttempts = 0;
       
       // Send join message
@@ -67,8 +67,12 @@ export const connectWebSocket = (userId: string, userName: string, channelId: st
       }
     };
     
-    wsConnection.onerror = (error) => {
-      console.error('WebSocket connection error:', error);
+    wsConnection.onerror = (event) => {
+      console.error('WebSocket connection error:', {
+        type: event.type,
+        target: event.target,
+        timeStamp: event.timeStamp
+      });
       
       // Attempt to reconnect if we haven't exceeded max attempts
       if (reconnectAttempts < maxReconnectAttempts) {
@@ -83,7 +87,11 @@ export const connectWebSocket = (userId: string, userName: string, channelId: st
     };
     
     wsConnection.onclose = (event) => {
-      console.log('WebSocket connection closed:', event.code, event.reason);
+      console.log('WebSocket connection closed:', {
+        code: event.code,
+        reason: event.reason,
+        wasClean: event.wasClean
+      });
       wsConnection = null;
       
       // Only attempt to reconnect if it wasn't a manual close

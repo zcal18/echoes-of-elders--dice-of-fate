@@ -146,7 +146,12 @@ app.get("/ws", upgradeWebSocket((c) => {
             console.log('Unknown WebSocket message type:', data.type);
         }
       } catch (error) {
-        console.error('WebSocket message error:', error);
+        console.error('WebSocket message processing error:', {
+          error: error.message,
+          stack: error.stack,
+          data: event.data
+        });
+        
         // Send error back to client
         try {
           ws.send(JSON.stringify({
@@ -159,7 +164,12 @@ app.get("/ws", upgradeWebSocket((c) => {
       }
     },
     onClose: (event, ws) => {
-      console.log('WebSocket connection closed');
+      console.log('WebSocket connection closed:', {
+        code: event.code,
+        reason: event.reason,
+        wasClean: event.wasClean
+      });
+      
       // Find and remove disconnected user
       for (const [userId, client] of connectedClients.entries()) {
         if (client === ws) {
@@ -179,13 +189,21 @@ app.get("/ws", upgradeWebSocket((c) => {
       }
     },
     onError: (event, ws) => {
-      console.error('WebSocket error:', event);
+      console.error('WebSocket error occurred:', {
+        type: event.type,
+        target: event.target ? 'WebSocket' : 'Unknown',
+        timeStamp: event.timeStamp,
+        message: event.message || 'Unknown error'
+      });
+      
       // Send error notification to client if connection is still open
       try {
-        ws.send(JSON.stringify({
-          type: 'error',
-          message: 'WebSocket connection error occurred'
-        }));
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'error',
+            message: 'WebSocket connection error occurred'
+          }));
+        }
       } catch (sendError) {
         console.error('Failed to send error notification:', sendError);
       }
@@ -198,7 +216,13 @@ function broadcastToChannel(channelId: string, message: any) {
     const userChannelId = userChannels.get(userId);
     if (userChannelId === channelId) {
       try {
-        ws.send(JSON.stringify(message));
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify(message));
+        } else {
+          // Remove dead connection
+          connectedClients.delete(userId);
+          userChannels.delete(userId);
+        }
       } catch (error) {
         console.error('Error broadcasting to channel:', error);
         // Remove dead connection
@@ -212,7 +236,13 @@ function broadcastToChannel(channelId: string, message: any) {
 function broadcastToAll(message: any) {
   for (const [userId, ws] of connectedClients.entries()) {
     try {
-      ws.send(JSON.stringify(message));
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(message));
+      } else {
+        // Remove dead connection
+        connectedClients.delete(userId);
+        userChannels.delete(userId);
+      }
     } catch (error) {
       console.error('Error broadcasting to all:', error);
       // Remove dead connection
@@ -239,7 +269,13 @@ function broadcastToGuildBattle(battleId: string, message: any) {
       const ws = connectedClients.get(userId);
       if (ws) {
         try {
-          ws.send(JSON.stringify(message));
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify(message));
+          } else {
+            // Remove dead connection
+            connectedClients.delete(userId);
+            userChannels.delete(userId);
+          }
         } catch (error) {
           console.error('Error broadcasting to guild battle:', error);
           // Remove dead connection
@@ -288,7 +324,7 @@ function findPvpMatch(userId: string) {
     const player1Ws = connectedClients.get(userId);
     const player2Ws = connectedClients.get(bestMatch.userId);
     
-    if (player1Ws) {
+    if (player1Ws && player1Ws.readyState === WebSocket.OPEN) {
       try {
         player1Ws.send(JSON.stringify({
           type: 'pvpMatchFound',
@@ -300,7 +336,7 @@ function findPvpMatch(userId: string) {
       }
     }
     
-    if (player2Ws) {
+    if (player2Ws && player2Ws.readyState === WebSocket.OPEN) {
       try {
         player2Ws.send(JSON.stringify({
           type: 'pvpMatchFound',

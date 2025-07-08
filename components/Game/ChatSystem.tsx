@@ -125,7 +125,7 @@ export default function ChatSystem() {
         };
         
         ws.onerror = (error) => {
-          console.error('WebSocket error:', error);
+          console.error('WebSocket error in ChatSystem:', error);
           setSubscriptionError(null); // Don't show error to user
         };
         
@@ -497,7 +497,7 @@ export default function ChatSystem() {
           // Enhanced width utilization for desktop
           isDesktop && styles.desktopChatArea
         ]}>
-          {/* Chat Header */}
+          {/* Chat Header - Simplified */}
           <View style={styles.chatHeader}>
             {(isMobile || Platform.OS !== 'web') && (
               <TouchableOpacity 
