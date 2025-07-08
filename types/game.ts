@@ -40,6 +40,13 @@ export interface Character {
   maxHealth: number;
   armorClass: number;
   damageDie: number;
+  // Dice roll tracking
+  lastDiceRoll?: {
+    value: number;
+    diceType: number;
+    modifier: number;
+    timestamp: number;
+  };
 }
 
 export interface Item {
@@ -124,6 +131,7 @@ export interface ShopItem {
   price: number;
   stock: number;
   category: 'weapons' | 'armor' | 'potions' | 'accessories' | 'materials';
+  featured?: boolean;
 }
 
 // Enemy types

@@ -53,4 +53,9 @@ export default {
   epic: '#8B5CF6',
   legendary: '#F59E0B',
   mythic: '#EF4444',
+  
+  // Character stat colors
+  health: '#EF4444',
+  mana: '#3B82F6',
+  experience: '#10B981',
 };
