@@ -53,8 +53,9 @@ export const trpcClient = trpc.createClient({
 let wsConnection: WebSocket | null = null;
 let reconnectAttempts = 0;
 const maxReconnectAttempts = 5;
-const reconnectDelay = 1000;
+const reconnectDelay = 2000;
 let isManualDisconnect = false;
+let reconnectTimeout: NodeJS.Timeout | null = null;
 
 export const connectWebSocket = (userId: string, userName: string, channelId: string = 'general') => {
   if (Platform.OS !== 'web') {
@@ -86,6 +87,12 @@ export const connectWebSocket = (userId: string, userName: string, channelId: st
       reconnectAttempts = 0;
       isManualDisconnect = false;
       
+      // Clear any pending reconnect timeout
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+      }
+      
       // Send join message
       if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
         const joinMessage = {
@@ -104,11 +111,7 @@ export const connectWebSocket = (userId: string, userName: string, channelId: st
       
       // Only attempt to reconnect if not manually disconnected and haven't exceeded max attempts
       if (!isManualDisconnect && reconnectAttempts < maxReconnectAttempts) {
-        setTimeout(() => {
-          reconnectAttempts++;
-          console.log(`Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts})`);
-          connectWebSocket(userId, userName, channelId);
-        }, reconnectDelay * reconnectAttempts);
+        scheduleReconnect(userId, userName, channelId);
       } else if (reconnectAttempts >= maxReconnectAttempts) {
         console.error('Max reconnection attempts reached');
       }
@@ -125,23 +128,43 @@ export const connectWebSocket = (userId: string, userName: string, channelId: st
       
       // Only attempt to reconnect if it wasn't a manual close and we haven't exceeded max attempts
       if (!isManualDisconnect && event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
-        setTimeout(() => {
-          reconnectAttempts++;
-          console.log(`Attempting to reconnect after close (${reconnectAttempts}/${maxReconnectAttempts})`);
-          connectWebSocket(userId, userName, channelId);
-        }, reconnectDelay * reconnectAttempts);
+        scheduleReconnect(userId, userName, channelId);
       }
     };
     
     return wsConnection;
   } catch (error) {
     console.error('Failed to create WebSocket connection:', error);
+    
+    // Schedule reconnect on connection creation failure
+    if (!isManualDisconnect && reconnectAttempts < maxReconnectAttempts) {
+      scheduleReconnect(userId, userName, channelId);
+    }
+    
     return null;
   }
 };
 
+const scheduleReconnect = (userId: string, userName: string, channelId: string) => {
+  if (reconnectTimeout) {
+    clearTimeout(reconnectTimeout);
+  }
+  
+  reconnectTimeout = setTimeout(() => {
+    reconnectAttempts++;
+    console.log(`Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts})`);
+    connectWebSocket(userId, userName, channelId);
+  }, reconnectDelay * Math.min(reconnectAttempts + 1, 5)); // Exponential backoff with cap
+};
+
 export const disconnectWebSocket = (userId: string) => {
   isManualDisconnect = true;
+  
+  // Clear any pending reconnect
+  if (reconnectTimeout) {
+    clearTimeout(reconnectTimeout);
+    reconnectTimeout = null;
+  }
   
   if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
     try {

@@ -423,5 +423,63 @@ export const spells: Spell[] = [
   }
 ];
 
+// Familiar types for summoning
+export const familiarTypes = [
+  {
+    type: 'sprite',
+    name: 'Forest Sprite',
+    icon: '🧚',
+    description: 'A tiny magical being that provides healing and support.',
+    levelRequirement: 1,
+    cost: 50,
+    abilities: ['Healing Aura', 'Nature Magic']
+  },
+  {
+    type: 'raven',
+    name: 'Shadow Raven',
+    icon: '🐦‍⬛',
+    description: 'An intelligent bird that scouts and provides reconnaissance.',
+    levelRequirement: 5,
+    cost: 75,
+    abilities: ['Scouting', 'Message Delivery']
+  },
+  {
+    type: 'wolf',
+    name: 'Spirit Wolf',
+    icon: '🐺',
+    description: 'A loyal companion that fights alongside you in battle.',
+    levelRequirement: 10,
+    cost: 100,
+    abilities: ['Pack Tactics', 'Fierce Loyalty']
+  },
+  {
+    type: 'golem',
+    name: 'Stone Golem',
+    icon: '🗿',
+    description: 'A magical construct that provides protection and strength.',
+    levelRequirement: 15,
+    cost: 150,
+    abilities: ['Stone Skin', 'Guardian Shield']
+  },
+  {
+    type: 'dragon',
+    name: 'Young Dragon',
+    icon: '🐉',
+    description: 'A powerful draconic companion with elemental breath.',
+    levelRequirement: 25,
+    cost: 300,
+    abilities: ['Breath Weapon', 'Dragon Fear']
+  },
+  {
+    type: 'phoenix',
+    name: 'Phoenix',
+    icon: '🔥',
+    description: 'A legendary firebird that can resurrect from ashes.',
+    levelRequirement: 35,
+    cost: 500,
+    abilities: ['Rebirth', 'Flame Aura']
+  }
+];
+
 // Re-export enemies from the new fragmented system
 export { getAllEnemies, getEnemiesByLevel, getEnemiesByDifficulty } from './enemies';

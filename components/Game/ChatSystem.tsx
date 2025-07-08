@@ -12,7 +12,6 @@ const isTablet = screenWidth > 768;
 const isMobile = screenWidth < 768;
 const isDesktop = Platform.OS === 'web' && screenWidth > 1024;
 
-// Adjusted sidebar widths for better desktop experience
 const SIDEBAR_WIDTH = Platform.OS === 'web' ? 
   (isMobile ? screenWidth * 0.85 : isDesktop ? 240 : 280) : 
   screenWidth * 0.75;
@@ -147,6 +146,9 @@ export default function ChatSystem() {
                 console.error('WebSocket error from server:', data.message);
                 addNotification(`Chat error: ${data.message}`, 'error');
                 break;
+              case 'joinConfirmed':
+                console.log('Successfully joined channel:', data.channelId);
+                break;
               case 'pvpMatchFound':
                 addNotification('PVP match found!', 'success');
                 break;
@@ -163,10 +165,8 @@ export default function ChatSystem() {
         
         ws.onerror = (error) => {
           console.error('WebSocket error in ChatSystem:', error);
-          // Only show notification for actual connection errors, not generic events
-          if (error && typeof error === 'object' && 'message' in error) {
-            addNotification('Connection error. Retrying...', 'error');
-          }
+          setConnectionStatus('error');
+          addNotification('Connection error. Retrying...', 'error');
         };
         
         ws.onopen = () => {
@@ -901,7 +901,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.surfaceLight,
   },
@@ -923,7 +923,7 @@ const styles = StyleSheet.create({
   channelItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: 8,
     gap: 8,
   },
   activeChannelItem: {
@@ -953,7 +953,7 @@ const styles = StyleSheet.create({
   chatHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 8,
+    padding: 6,
     borderBottomWidth: 1,
     borderBottomColor: colors.surfaceLight,
     backgroundColor: colors.surface,
@@ -1000,7 +1000,7 @@ const styles = StyleSheet.create({
   },
   messageList: {
     flex: 1,
-    padding: 4,
+    padding: 2,
   },
   desktopMessageList: {
     paddingHorizontal: 8,
@@ -1069,10 +1069,10 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   messageContainer: {
-    padding: 6,
+    padding: 4,
     borderRadius: 8,
     backgroundColor: colors.surface,
-    marginBottom: 4,
+    marginBottom: 2,
     width: '100%',
   },
   messageHeader: {
@@ -1138,37 +1138,37 @@ const styles = StyleSheet.create({
   // Input Container Styles
   inputContainer: {
     flexDirection: 'row',
-    padding: 4,
-    gap: 6,
+    padding: 2,
+    gap: 4,
     borderTopWidth: 1,
     borderTopColor: colors.surfaceLight,
     alignItems: 'flex-end',
     backgroundColor: colors.surface,
   },
   desktopInputContainer: {
-    padding: 8,
-    gap: 12,
+    padding: 6,
+    gap: 8,
   },
   desktopInputContainerWide: {
-    paddingHorizontal: 12,
-    gap: 16,
+    paddingHorizontal: 8,
+    gap: 12,
   },
   inlineInputControls: {
     flexDirection: 'row',
-    gap: 3,
+    gap: 2,
     alignItems: 'center',
   },
   desktopInputControls: {
-    gap: 8,
+    gap: 6,
   },
   compactControlButton: {
     backgroundColor: colors.surfaceDark,
     borderRadius: 4,
-    padding: 4,
+    padding: 3,
     justifyContent: 'center',
     alignItems: 'center',
-    width: 24,
-    height: 24,
+    width: 20,
+    height: 20,
   },
   activeControlButton: {
     backgroundColor: colors.primary + '20',
@@ -1177,41 +1177,41 @@ const styles = StyleSheet.create({
   },
   compactInput: {
     flex: 1,
-    padding: 6,
+    padding: 4,
     borderRadius: 6,
     backgroundColor: colors.background,
     color: colors.text,
     maxHeight: 60,
-    minHeight: 32,
+    minHeight: 28,
     borderWidth: 1,
     borderColor: colors.surfaceLight,
     fontSize: 14,
   },
   desktopInput: {
-    padding: 8,
+    padding: 6,
     borderRadius: 8,
     maxHeight: 80,
-    minHeight: 40,
+    minHeight: 32,
     fontSize: 16,
   },
   desktopInputWide: {
-    minHeight: 44,
+    minHeight: 36,
     fontSize: 16,
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
   },
   compactSendButton: {
     backgroundColor: colors.primary,
     borderRadius: 6,
-    padding: 6,
-    height: 32,
-    width: 32,
+    padding: 4,
+    height: 28,
+    width: 28,
     justifyContent: 'center',
     alignItems: 'center',
   },
   desktopSendButton: {
-    padding: 8,
-    height: 40,
-    width: 40,
+    padding: 6,
+    height: 32,
+    width: 32,
     borderRadius: 8,
   },
   

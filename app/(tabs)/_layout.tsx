@@ -47,9 +47,9 @@ export default function TabLayout() {
       />
       
       <Tabs.Screen
-        name="kingdom"
+        name="community"
         options={{
-          title: 'Kingdom',
+          title: 'Guild',
           tabBarIcon: ({ color, size }) => <Crown size={size} color={color} />,
         }}
       />
@@ -59,14 +59,6 @@ export default function TabLayout() {
         options={{
           title: 'Library',
           tabBarIcon: ({ color, size }) => <BookOpen size={size} color={color} />,
-        }}
-      />
-      
-      <Tabs.Screen
-        name="community"
-        options={{
-          title: 'Community',
-          tabBarIcon: ({ color, size }) => <Users size={size} color={color} />,
         }}
       />
       
@@ -95,6 +87,13 @@ export default function TabLayout() {
       />
       
       {/* Hidden tabs - accessible via top icons */}
+      <Tabs.Screen
+        name="kingdom"
+        options={{
+          href: null, // Hide from tab bar
+        }}
+      />
+      
       <Tabs.Screen
         name="profile"
         options={{

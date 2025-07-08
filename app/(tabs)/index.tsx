@@ -6,6 +6,7 @@ import colors from '@/constants/colors';
 import { Sword, Shield, Users, MessageSquare, User, Heart } from 'lucide-react-native';
 import NotificationSystem from '@/components/NotificationSystem';
 import ReactivePlayerCard from '@/components/Game/ReactivePlayerCard';
+import { familiarTypes } from '@/constants/gameData';
 
 const { width: screenWidth } = Dimensions.get('window');
 const isTablet = screenWidth > 768;
@@ -18,7 +19,10 @@ export default function HomeScreen() {
     characters,
     diamonds,
     activeParty,
-    guilds
+    guilds,
+    canSummonFamiliar,
+    summonFamiliar,
+    dismissFamiliar
   } = useGameStore();
   
   const [showCharacterCard, setShowCharacterCard] = useState(false);
@@ -113,14 +117,14 @@ export default function HomeScreen() {
         name: buff.name,
         effect: buff.description || 'Buff effect',
         duration: buff.duration,
-        type: 'magic' as const // Default type, could be enhanced based on buff properties
+        type: 'magic' as const
       })),
       // Convert Debuff objects to expected format
       debuffs: (activeCharacter.debuffs || []).map(debuff => ({
         name: debuff.name,
         effect: debuff.description || 'Debuff effect',
         duration: debuff.duration,
-        type: 'curse' as const // Default type, could be enhanced based on debuff properties
+        type: 'curse' as const
       })),
       profileImage: activeCharacter.profileImage,
       customRace: activeCharacter.customRace,
@@ -129,13 +133,17 @@ export default function HomeScreen() {
     };
   };
   
+  const handleSummonFamiliar = (type: string, name: string) => {
+    const success = summonFamiliar(type as any, name);
+    if (success) {
+      setShowFamiliarModal(false);
+    }
+  };
+  
   const guildInfo = getGuildInfo();
   
   // Check if character is fainted
   const isCharacterFainted = activeCharacter.health.current <= 0;
-  
-  // Check if character can summon familiar
-  const canSummonFamiliar = !activeCharacter.familiar;
   
   return (
     <View style={styles.container}>
@@ -357,8 +365,8 @@ export default function HomeScreen() {
               onPress={() => router.push('/(tabs)/community')}
             >
               <Users size={isTablet ? 32 : 24} color={colors.text} />
-              <Text style={styles.actionTitle}>Community</Text>
-              <Text style={styles.actionSubtitle}>Social features</Text>
+              <Text style={styles.actionTitle}>Guild</Text>
+              <Text style={styles.actionSubtitle}>Guild features</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
@@ -380,19 +388,14 @@ export default function HomeScreen() {
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={[
-                styles.actionCard, 
-                styles.familiarAction,
-                !canSummonFamiliar && styles.disabledActionCard
-              ]}
+              style={[styles.actionCard, styles.familiarAction]}
               onPress={() => setShowFamiliarModal(true)}
-              disabled={!canSummonFamiliar}
             >
-              <Heart size={isTablet ? 32 : 24} color={!canSummonFamiliar ? colors.textMuted : colors.text} />
-              <Text style={[styles.actionTitle, !canSummonFamiliar && styles.disabledActionText]}>
+              <Heart size={isTablet ? 32 : 24} color={colors.text} />
+              <Text style={styles.actionTitle}>
                 {activeCharacter.familiar ? 'Manage Familiar' : 'Summon Familiar'}
               </Text>
-              <Text style={[styles.actionSubtitle, !canSummonFamiliar && styles.disabledActionText]}>
+              <Text style={styles.actionSubtitle}>
                 {activeCharacter.familiar ? `${activeCharacter.familiar.name} (Lv.${activeCharacter.familiar.level})` : 'Get a companion'}
               </Text>
             </TouchableOpacity>
@@ -470,7 +473,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
             
-            <View style={styles.familiarContent}>
+            <ScrollView style={styles.familiarContent}>
               {activeCharacter.familiar ? (
                 <View style={styles.familiarInfo}>
                   <Text style={styles.familiarName}>{activeCharacter.familiar.name}</Text>
@@ -481,7 +484,7 @@ export default function HomeScreen() {
                   <TouchableOpacity 
                     style={styles.dismissButton}
                     onPress={() => {
-                      useGameStore.getState().dismissFamiliar();
+                      dismissFamiliar();
                       setShowFamiliarModal(false);
                     }}
                   >
@@ -491,25 +494,44 @@ export default function HomeScreen() {
               ) : (
                 <View style={styles.summonInfo}>
                   <Text style={styles.summonText}>
-                    Familiars are loyal companions that aid you in your adventures. 
-                    They require diamonds to summon and grow stronger over time.
-                  </Text>
-                  <Text style={styles.summonNote}>
-                    Visit the Shop to purchase familiar summoning items with diamonds.
+                    Choose a familiar to summon. Each familiar has unique abilities and requires diamonds to unlock.
                   </Text>
                   
-                  <TouchableOpacity 
-                    style={styles.shopButton}
-                    onPress={() => {
-                      setShowFamiliarModal(false);
-                      router.push('/(tabs)/shop');
-                    }}
-                  >
-                    <Text style={styles.shopButtonText}>Visit Shop</Text>
-                  </TouchableOpacity>
+                  {familiarTypes.map(familiar => {
+                    const { canSummon, reason, cost } = canSummonFamiliar(familiar.type as any);
+                    
+                    return (
+                      <TouchableOpacity
+                        key={familiar.type}
+                        style={[
+                          styles.familiarOption,
+                          !canSummon && styles.disabledFamiliarOption
+                        ]}
+                        onPress={() => {
+                          if (canSummon) {
+                            handleSummonFamiliar(familiar.type, familiar.name);
+                          }
+                        }}
+                        disabled={!canSummon}
+                      >
+                        <Text style={styles.familiarIcon}>{familiar.icon}</Text>
+                        <View style={styles.familiarDetails}>
+                          <Text style={styles.familiarOptionName}>{familiar.name}</Text>
+                          <Text style={styles.familiarDescription}>{familiar.description}</Text>
+                          <Text style={styles.familiarCost}>Cost: {cost} diamonds</Text>
+                          <Text style={styles.familiarRequirement}>
+                            Requires Level {familiar.levelRequirement}
+                          </Text>
+                          {!canSummon && (
+                            <Text style={styles.familiarReason}>{reason}</Text>
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               )}
-            </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -924,8 +946,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 20,
     padding: 20,
-    maxWidth: isTablet ? 400 : 320,
+    maxWidth: isTablet ? 500 : 320,
     width: '100%',
+    maxHeight: '80%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
@@ -960,35 +983,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   familiarContent: {
-    alignItems: 'center',
+    maxHeight: 400,
   },
   familiarName: {
     fontSize: isTablet ? 24 : 20,
     fontWeight: 'bold',
     color: colors.text,
     marginBottom: 8,
+    textAlign: 'center',
   },
   familiarType: {
     fontSize: isTablet ? 16 : 14,
     color: colors.textSecondary,
     marginBottom: 4,
+    textAlign: 'center',
   },
   familiarLevel: {
     fontSize: isTablet ? 16 : 14,
     color: colors.textSecondary,
     marginBottom: 4,
+    textAlign: 'center',
   },
   familiarLoyalty: {
     fontSize: isTablet ? 16 : 14,
     color: colors.textSecondary,
     marginBottom: 20,
+    textAlign: 'center',
   },
   dismissButton: {
     backgroundColor: colors.error,
     borderRadius: 12,
     padding: isTablet ? 16 : 12,
     alignItems: 'center',
-    minWidth: 120,
   },
   dismissButtonText: {
     color: colors.text,
@@ -996,32 +1022,58 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   summonInfo: {
-    alignItems: 'center',
+    alignItems: 'stretch',
   },
   summonText: {
     fontSize: isTablet ? 16 : 14,
     color: colors.text,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
     lineHeight: isTablet ? 24 : 20,
   },
-  summonNote: {
+  familiarOption: {
+    flexDirection: 'row',
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  disabledFamiliarOption: {
+    opacity: 0.5,
+  },
+  familiarIcon: {
+    fontSize: 32,
+    marginRight: 12,
+  },
+  familiarDetails: {
+    flex: 1,
+  },
+  familiarOptionName: {
+    fontSize: isTablet ? 18 : 16,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  familiarDescription: {
     fontSize: isTablet ? 14 : 12,
     color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: isTablet ? 20 : 16,
+    marginBottom: 4,
   },
-  shopButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    padding: isTablet ? 16 : 12,
-    alignItems: 'center',
-    minWidth: 120,
-  },
-  shopButtonText: {
-    color: colors.text,
-    fontSize: isTablet ? 16 : 14,
+  familiarCost: {
+    fontSize: isTablet ? 14 : 12,
+    color: colors.warning,
     fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  familiarRequirement: {
+    fontSize: isTablet ? 12 : 10,
+    color: colors.textSecondary,
+    marginBottom: 2,
+  },
+  familiarReason: {
+    fontSize: isTablet ? 12 : 10,
+    color: colors.error,
+    fontStyle: 'italic',
   },
 });

@@ -141,16 +141,85 @@ export interface Enemy {
   description: string;
   level: number;
   requiredLevel: number;
-  health: number;
-  attack: number;
-  defense: number;
-  experience: number;
-  goldReward: number;
-  loot?: Item[];
+  health: { max: number };
+  stats: {
+    strength: number;
+    dexterity: number;
+    constitution: number;
+    intelligence: number;
+    wisdom: number;
+    charisma: number;
+  };
+  armorClass?: number;
+  damageDie?: number;
+  attacks: Array<{
+    name: string;
+    damage: string;
+    description: string;
+  }>;
+  loot: {
+    experience: number;
+    gold: { min: number; max: number };
+    items?: Item[];
+  };
   abilities?: string[];
   weaknesses?: string[];
   resistances?: string[];
-  image?: string;
+  imageUrl?: string;
+  lore?: string;
+}
+
+// Race and Class types
+export interface Race {
+  id: string;
+  name: string;
+  description: string;
+  statBonuses: {
+    [key: string]: number;
+  };
+  abilities: string[];
+  lore: string;
+}
+
+export interface Class {
+  id: string;
+  name: string;
+  description: string;
+  primaryStat: string;
+  abilities: string[];
+  startingEquipment: string[];
+  lore: string;
+  isCustom?: boolean;
+  statBonuses?: {
+    [key: string]: number;
+  };
+}
+
+// Spell types
+export interface Spell {
+  id: string;
+  name: string;
+  description: string;
+  school: string;
+  level: number;
+  manaCost: number;
+  castTime: number;
+  cooldown: number;
+  damage: { min: number; max: number };
+  range: number;
+  effects: Array<{
+    type: string;
+    value: number;
+    duration: number;
+    element?: string;
+  }>;
+  requirements: {
+    class: string[];
+    level: number;
+    intelligence?: number;
+    wisdom?: number;
+  };
+  lore: string;
 }
 
 // Social types
@@ -357,6 +426,53 @@ export interface Notification {
   message: string;
   type: 'success' | 'error' | 'info';
   timestamp: number;
+}
+
+// Combat Participant type for ReactivePlayerCard
+export interface CombatParticipant {
+  id: string;
+  name: string;
+  level: number;
+  race: string;
+  class: string;
+  health: {
+    current: number;
+    max: number;
+  };
+  mana: {
+    current: number;
+    max: number;
+  };
+  stats: {
+    strength: number;
+    dexterity: number;
+    constitution: number;
+    intelligence: number;
+    wisdom: number;
+    charisma: number;
+  };
+  isPlayer: boolean;
+  buffs: Array<{
+    name: string;
+    effect: string;
+    duration: number;
+    type: 'magic' | 'attack' | 'defense' | 'speed';
+  }>;
+  debuffs: Array<{
+    name: string;
+    effect: string;
+    duration: number;
+    type: 'curse' | 'poison' | 'weakness' | 'slow';
+  }>;
+  profileImage?: string;
+  customRace?: CustomRace;
+  customClass?: CustomClass;
+  lastDiceRoll?: {
+    value: number;
+    diceType: number;
+    modifier: number;
+    timestamp: number;
+  };
 }
 
 // Main game state

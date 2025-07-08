@@ -9,7 +9,11 @@ import { createContext } from "./trpc/create-context";
 const app = new Hono();
 
 // Enable CORS for all routes
-app.use("*", cors());
+app.use("*", cors({
+  origin: "*",
+  allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowHeaders: ["Content-Type", "Authorization", "x-user-id", "x-user-name"],
+}));
 
 // WebSocket for real-time features
 const connectedClients = new Map<string, any>();
@@ -459,7 +463,8 @@ app.get("/", (c) => {
     status: "ok", 
     message: "API is running",
     connectedUsers: connectedClients.size,
-    activeChannels: new Set(userChannels.values()).size
+    activeChannels: new Set(userChannels.values()).size,
+    timestamp: new Date().toISOString()
   });
 });
 
