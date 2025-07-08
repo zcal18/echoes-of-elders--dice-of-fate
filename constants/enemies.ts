@@ -121,7 +121,7 @@ const beginnerEnemies: Enemy[] = [
     id: 'plague_rat_swarm',
     name: 'Plague Rat Swarm Leader',
     level: 1,
-    health: { current: 15, max: 15 },
+    health: { max: 15 },
     maxHealth: 15,
     currentHealth: 15,
     attack: 3,
@@ -142,15 +142,15 @@ const beginnerEnemies: Enemy[] = [
     },
     stats: { strength: 6, dexterity: 14, constitution: 6, intelligence: 4, wisdom: 8, charisma: 4 },
     attacks: [
-      { name: 'Diseased Bite', damage: 3, description: 'Fangs dripping with plague and pestilence' },
-      { name: 'Swarm Call', damage: 2, description: 'Summons smaller rats to overwhelm the enemy' }
+      { name: 'Diseased Bite', damage: '3', description: 'Fangs dripping with plague and pestilence' },
+      { name: 'Swarm Call', damage: '2', description: 'Summons smaller rats to overwhelm the enemy' }
     ]
   },
   {
     id: 'bloodfang_goblin',
     name: 'Bloodfang Goblin Stalker',
     level: 1,
-    health: { current: 25, max: 25 },
+    health: { max: 25 },
     maxHealth: 25,
     currentHealth: 25,
     attack: 5,
@@ -175,21 +175,20 @@ const beginnerEnemies: Enemy[] = [
         value: 5,
         equipSlot: 'mainHand',
         stats: { strength: 1 },
-        rarity: 'common',
-        bonus: 1
+        rarity: 'common'
       }]
     },
     stats: { strength: 8, dexterity: 12, constitution: 8, intelligence: 6, wisdom: 6, charisma: 6 },
     attacks: [
-      { name: 'Venomous Slash', damage: 5, description: 'A poisoned blade cuts deep into flesh' },
-      { name: 'Shadow Strike', damage: 8, description: 'Emerges from darkness to deliver a devastating blow' }
+      { name: 'Venomous Slash', damage: '5', description: 'A poisoned blade cuts deep into flesh' },
+      { name: 'Shadow Strike', damage: '8', description: 'Emerges from darkness to deliver a devastating blow' }
     ]
   },
   {
     id: 'cursed_bone_guardian',
     name: 'Cursed Bone Guardian',
     level: 2,
-    health: { current: 30, max: 30 },
+    health: { max: 30 },
     maxHealth: 30,
     currentHealth: 30,
     attack: 6,
@@ -214,21 +213,20 @@ const beginnerEnemies: Enemy[] = [
         value: 12,
         equipSlot: 'mainHand',
         stats: { strength: 2 },
-        rarity: 'common',
-        bonus: 2
+        rarity: 'common'
       }]
     },
     stats: { strength: 10, dexterity: 8, constitution: 10, intelligence: 4, wisdom: 6, charisma: 4 },
     attacks: [
-      { name: 'Soul Rend', damage: 6, description: 'A strike that tears at both flesh and spirit' },
-      { name: 'Undying Wrath', damage: 8, description: 'Channels the fury of the restless dead' }
+      { name: 'Soul Rend', damage: '6', description: 'A strike that tears at both flesh and spirit' },
+      { name: 'Undying Wrath', damage: '8', description: 'Channels the fury of the restless dead' }
     ]
   },
   {
     id: 'ironhide_tusker',
     name: 'Ironhide Tusker Beast',
     level: 2,
-    health: { current: 40, max: 40 },
+    health: { max: 40 },
     maxHealth: 40,
     currentHealth: 40,
     attack: 8,
@@ -256,15 +254,15 @@ const beginnerEnemies: Enemy[] = [
     },
     stats: { strength: 12, dexterity: 8, constitution: 12, intelligence: 4, wisdom: 6, charisma: 4 },
     attacks: [
-      { name: 'Gore Rush', damage: 8, description: 'Charges with tusks aimed at vital organs' },
-      { name: 'Berserker Charge', damage: 12, description: 'Final desperate charge when near death' }
+      { name: 'Gore Rush', damage: '8', description: 'Charges with tusks aimed at vital organs' },
+      { name: 'Berserker Charge', damage: '12', description: 'Final desperate charge when near death' }
     ]
   },
   {
     id: 'widow_maker_spider',
     name: 'Widow Maker Arachnid',
     level: 3,
-    health: { current: 35, max: 35 },
+    health: { max: 35 },
     maxHealth: 35,
     currentHealth: 35,
     attack: 7,
@@ -292,8 +290,8 @@ const beginnerEnemies: Enemy[] = [
     },
     stats: { strength: 8, dexterity: 16, constitution: 10, intelligence: 6, wisdom: 12, charisma: 4 },
     attacks: [
-      { name: 'Paralyzing Bite', damage: 7, description: 'Fangs inject venom that freezes muscles' },
-      { name: 'Death Leap', damage: 10, description: 'Pounces from above with all eight legs' }
+      { name: 'Paralyzing Bite', damage: '7', description: 'Fangs inject venom that freezes muscles' },
+      { name: 'Death Leap', damage: '10', description: 'Pounces from above with all eight legs' }
     ]
   }
 ];
@@ -304,7 +302,7 @@ const intermediateEnemies: Enemy[] = [
     id: 'bloodmoon_alpha',
     name: 'Bloodmoon Alpha Wolf',
     level: 6,
-    health: { current: 60, max: 60 },
+    health: { max: 60 },
     maxHealth: 60,
     currentHealth: 60,
     attack: 12,
@@ -332,15 +330,15 @@ const intermediateEnemies: Enemy[] = [
     },
     stats: { strength: 14, dexterity: 16, constitution: 12, intelligence: 6, wisdom: 10, charisma: 6 },
     attacks: [
-      { name: 'Throat Ripper', damage: 12, description: 'Fangs seek the jugular with predatory precision' },
-      { name: 'Alpha Dominance', damage: 15, description: 'Overwhelming assault that establishes supremacy' }
+      { name: 'Throat Ripper', damage: '12', description: 'Fangs seek the jugular with predatory precision' },
+      { name: 'Alpha Dominance', damage: '15', description: 'Overwhelming assault that establishes supremacy' }
     ]
   },
   {
     id: 'skullcrusher_orc',
     name: 'Skullcrusher Berserker',
     level: 8,
-    health: { current: 80, max: 80 },
+    health: { max: 80 },
     maxHealth: 80,
     currentHealth: 80,
     attack: 16,
@@ -365,21 +363,20 @@ const intermediateEnemies: Enemy[] = [
         value: 35,
         equipSlot: 'mainHand',
         stats: { strength: 3 },
-        rarity: 'uncommon',
-        bonus: 3
+        rarity: 'uncommon'
       }]
     },
     stats: { strength: 16, dexterity: 10, constitution: 14, intelligence: 6, wisdom: 8, charisma: 6 },
     attacks: [
-      { name: 'Bone Splitter', damage: 16, description: 'Axe blow that shatters bones like kindling' },
-      { name: 'Bloodthirsty Rampage', damage: 20, description: 'Enters a killing frenzy when wounded' }
+      { name: 'Bone Splitter', damage: '16', description: 'Axe blow that shatters bones like kindling' },
+      { name: 'Bloodthirsty Rampage', damage: '20', description: 'Enters a killing frenzy when wounded' }
     ]
   },
   {
     id: 'venomspine_crawler',
     name: 'Venomspine Crawler',
     level: 10,
-    health: { current: 90, max: 90 },
+    health: { max: 90 },
     maxHealth: 90,
     currentHealth: 90,
     attack: 18,
@@ -403,21 +400,21 @@ const intermediateEnemies: Enemy[] = [
         type: 'armor',
         value: 40,
         equipSlot: 'chest',
-        stats: { constitution: 2, defense: 3 },
+        stats: { constitution: 2 },
         rarity: 'uncommon'
       }]
     },
     stats: { strength: 12, dexterity: 16, constitution: 14, intelligence: 6, wisdom: 10, charisma: 4 },
     attacks: [
-      { name: 'Lethal Injection', damage: 18, description: 'Mandibles inject venom that burns like fire' },
-      { name: 'Venom Geyser', damage: 14, description: 'Sprays toxic fluid when desperate' }
+      { name: 'Lethal Injection', damage: '18', description: 'Mandibles inject venom that burns like fire' },
+      { name: 'Venom Geyser', damage: '14', description: 'Sprays toxic fluid when desperate' }
     ]
   },
   {
     id: 'shadow_stalker',
     name: 'Shadow Stalker Assassin',
     level: 12,
-    health: { current: 85, max: 85 },
+    health: { max: 85 },
     maxHealth: 85,
     currentHealth: 85,
     attack: 22,
@@ -442,21 +439,20 @@ const intermediateEnemies: Enemy[] = [
         value: 50,
         equipSlot: 'mainHand',
         stats: { dexterity: 3, strength: 2 },
-        rarity: 'rare',
-        bonus: 4
+        rarity: 'rare'
       }]
     },
     stats: { strength: 12, dexterity: 20, constitution: 10, intelligence: 14, wisdom: 16, charisma: 8 },
     attacks: [
-      { name: 'Shadow Strike', damage: 22, description: 'Materializes behind target for a critical blow' },
-      { name: 'Void Slash', damage: 18, description: 'Cuts through reality itself' }
+      { name: 'Shadow Strike', damage: '22', description: 'Materializes behind target for a critical blow' },
+      { name: 'Void Slash', damage: '18', description: 'Cuts through reality itself' }
     ]
   },
   {
     id: 'flame_wraith',
     name: 'Infernal Flame Wraith',
     level: 15,
-    health: { current: 120, max: 120 },
+    health: { max: 120 },
     maxHealth: 120,
     currentHealth: 120,
     attack: 25,
@@ -484,8 +480,8 @@ const intermediateEnemies: Enemy[] = [
     },
     stats: { strength: 8, dexterity: 14, constitution: 16, intelligence: 18, wisdom: 12, charisma: 16 },
     attacks: [
-      { name: 'Infernal Blast', damage: 25, description: 'Unleashes a torrent of hellfire' },
-      { name: 'Soul Burn', damage: 20, description: 'Fire that burns the very essence of life' }
+      { name: 'Infernal Blast', damage: '25', description: 'Unleashes a torrent of hellfire' },
+      { name: 'Soul Burn', damage: '20', description: 'Fire that burns the very essence of life' }
     ]
   }
 ];
@@ -496,7 +492,7 @@ const advancedEnemies: Enemy[] = [
     id: 'stone_titan',
     name: 'Ancient Stone Titan',
     level: 18,
-    health: { current: 200, max: 200 },
+    health: { max: 200 },
     maxHealth: 200,
     currentHealth: 200,
     attack: 30,
@@ -524,16 +520,16 @@ const advancedEnemies: Enemy[] = [
     },
     stats: { strength: 22, dexterity: 6, constitution: 20, intelligence: 8, wisdom: 12, charisma: 6 },
     attacks: [
-      { name: 'Earthquake Slam', damage: 30, description: 'Fists that shake the very foundations of the earth' },
-      { name: 'Stone Barrage', damage: 25, description: 'Hurls massive boulders with devastating force' },
-      { name: 'Titan Roar', damage: 0, description: 'A bellow that weakens the resolve of enemies' }
+      { name: 'Earthquake Slam', damage: '30', description: 'Fists that shake the very foundations of the earth' },
+      { name: 'Stone Barrage', damage: '25', description: 'Hurls massive boulders with devastating force' },
+      { name: 'Titan Roar', damage: '0', description: 'A bellow that weakens the resolve of enemies' }
     ]
   },
   {
     id: 'void_knight',
     name: 'Void Knight Commander',
     level: 22,
-    health: { current: 180, max: 180 },
+    health: { max: 180 },
     maxHealth: 180,
     currentHealth: 180,
     attack: 35,
@@ -557,22 +553,22 @@ const advancedEnemies: Enemy[] = [
         type: 'armor',
         value: 120,
         equipSlot: 'chest',
-        stats: { constitution: 4, defense: 5 },
+        stats: { constitution: 4 },
         rarity: 'rare'
       }]
     },
     stats: { strength: 18, dexterity: 12, constitution: 16, intelligence: 14, wisdom: 10, charisma: 8 },
     attacks: [
-      { name: 'Void Blade', damage: 35, description: 'A sword that cuts through dimensions' },
-      { name: 'Dark Smite', damage: 28, description: 'Corrupted divine power turned to evil' },
-      { name: 'Abyssal Shield', damage: 0, description: 'Summons protective void energy' }
+      { name: 'Void Blade', damage: '35', description: 'A sword that cuts through dimensions' },
+      { name: 'Dark Smite', damage: '28', description: 'Corrupted divine power turned to evil' },
+      { name: 'Abyssal Shield', damage: '0', description: 'Summons protective void energy' }
     ]
   },
   {
     id: 'crystal_dragon',
     name: 'Prismatic Crystal Dragon',
     level: 25,
-    health: { current: 300, max: 300 },
+    health: { max: 300 },
     maxHealth: 300,
     currentHealth: 300,
     attack: 40,
@@ -600,16 +596,16 @@ const advancedEnemies: Enemy[] = [
     },
     stats: { strength: 20, dexterity: 16, constitution: 18, intelligence: 20, wisdom: 18, charisma: 22 },
     attacks: [
-      { name: 'Prismatic Breath', damage: 40, description: 'Breath weapon that deals multiple damage types' },
-      { name: 'Crystal Claw', damage: 35, description: 'Claws that can shatter steel' },
-      { name: 'Light Refraction', damage: 30, description: 'Focuses sunlight into a devastating beam' }
+      { name: 'Prismatic Breath', damage: '40', description: 'Breath weapon that deals multiple damage types' },
+      { name: 'Crystal Claw', damage: '35', description: 'Claws that can shatter steel' },
+      { name: 'Light Refraction', damage: '30', description: 'Focuses sunlight into a devastating beam' }
     ]
   },
   {
     id: 'nightmare_lord',
     name: 'Lord of Nightmares',
     level: 28,
-    health: { current: 250, max: 250 },
+    health: { max: 250 },
     maxHealth: 250,
     currentHealth: 250,
     attack: 45,
@@ -637,16 +633,16 @@ const advancedEnemies: Enemy[] = [
     },
     stats: { strength: 16, dexterity: 18, constitution: 14, intelligence: 22, wisdom: 20, charisma: 24 },
     attacks: [
-      { name: 'Terror Strike', damage: 45, description: 'An attack that manifests the victim\'s greatest fear' },
-      { name: 'Nightmare Realm', damage: 35, description: 'Traps the enemy in a world of horrors' },
-      { name: 'Fear Aura', damage: 0, description: 'Radiates an aura of pure terror' }
+      { name: 'Terror Strike', damage: '45', description: 'An attack that manifests the victim\'s greatest fear' },
+      { name: 'Nightmare Realm', damage: '35', description: 'Traps the enemy in a world of horrors' },
+      { name: 'Fear Aura', damage: '0', description: 'Radiates an aura of pure terror' }
     ]
   },
   {
     id: 'phoenix_reborn',
     name: 'Phoenix of Eternal Rebirth',
     level: 30,
-    health: { current: 350, max: 350 },
+    health: { max: 350 },
     maxHealth: 350,
     currentHealth: 350,
     attack: 50,
@@ -674,9 +670,9 @@ const advancedEnemies: Enemy[] = [
     },
     stats: { strength: 18, dexterity: 20, constitution: 16, intelligence: 18, wisdom: 22, charisma: 20 },
     attacks: [
-      { name: 'Rebirth Flame', damage: 50, description: 'Fire that burns away weakness and brings renewal' },
-      { name: 'Solar Flare', damage: 45, description: 'Unleashes the power of a miniature sun' },
-      { name: 'Phoenix Resurrection', damage: 0, description: 'Heals itself through the power of rebirth' }
+      { name: 'Rebirth Flame', damage: '50', description: 'Fire that burns away weakness and brings renewal' },
+      { name: 'Solar Flare', damage: '45', description: 'Unleashes the power of a miniature sun' },
+      { name: 'Phoenix Resurrection', damage: '0', description: 'Heals itself through the power of rebirth' }
     ]
   }
 ];
@@ -687,7 +683,7 @@ const legendaryEnemies: Enemy[] = [
     id: 'world_serpent',
     name: 'Jormungandr the World Serpent',
     level: 35,
-    health: { current: 500, max: 500 },
+    health: { max: 500 },
     maxHealth: 500,
     currentHealth: 500,
     attack: 60,
@@ -715,16 +711,16 @@ const legendaryEnemies: Enemy[] = [
     },
     stats: { strength: 26, dexterity: 14, constitution: 24, intelligence: 16, wisdom: 18, charisma: 12 },
     attacks: [
-      { name: 'World Shaking Coil', damage: 60, description: 'Constricts with the force of tectonic plates' },
-      { name: 'Poison Tsunami', damage: 50, description: 'Spits venom that could poison an ocean' },
-      { name: 'Earthquake Thrash', damage: 55, description: 'Movement that splits the very ground' }
+      { name: 'World Shaking Coil', damage: '60', description: 'Constricts with the force of tectonic plates' },
+      { name: 'Poison Tsunami', damage: '50', description: 'Spits venom that could poison an ocean' },
+      { name: 'Earthquake Thrash', damage: '55', description: 'Movement that splits the very ground' }
     ]
   },
   {
     id: 'time_lich',
     name: 'Chronarch the Time Lich',
     level: 40,
-    health: { current: 400, max: 400 },
+    health: { max: 400 },
     maxHealth: 400,
     currentHealth: 400,
     attack: 70,
@@ -752,16 +748,16 @@ const legendaryEnemies: Enemy[] = [
     },
     stats: { strength: 12, dexterity: 16, constitution: 18, intelligence: 26, wisdom: 24, charisma: 20 },
     attacks: [
-      { name: 'Temporal Rift', damage: 70, description: 'Tears through time to strike from multiple moments' },
-      { name: 'Age Decay', damage: 55, description: 'Ages the target rapidly, weakening them' },
-      { name: 'Time Stop', damage: 0, description: 'Freezes time to gain multiple actions' }
+      { name: 'Temporal Rift', damage: '70', description: 'Tears through time to strike from multiple moments' },
+      { name: 'Age Decay', damage: '55', description: 'Ages the target rapidly, weakening them' },
+      { name: 'Time Stop', damage: '0', description: 'Freezes time to gain multiple actions' }
     ]
   },
   {
     id: 'void_emperor',
     name: 'Emperor of the Endless Void',
     level: 45,
-    health: { current: 600, max: 600 },
+    health: { max: 600 },
     maxHealth: 600,
     currentHealth: 600,
     attack: 80,
@@ -791,16 +787,16 @@ const legendaryEnemies: Enemy[] = [
     },
     stats: { strength: 20, dexterity: 18, constitution: 22, intelligence: 28, wisdom: 26, charisma: 30 },
     attacks: [
-      { name: 'Reality Erasure', damage: 80, description: 'Attempts to erase the target from existence' },
-      { name: 'Void Implosion', damage: 70, description: 'Creates a miniature black hole' },
-      { name: 'Nihility Wave', damage: 60, description: 'A wave of pure nothingness' }
+      { name: 'Reality Erasure', damage: '80', description: 'Attempts to erase the target from existence' },
+      { name: 'Void Implosion', damage: '70', description: 'Creates a miniature black hole' },
+      { name: 'Nihility Wave', damage: '60', description: 'A wave of pure nothingness' }
     ]
   },
   {
     id: 'creation_dragon',
     name: 'Bahamut the Creation Dragon',
     level: 50,
-    health: { current: 1000, max: 1000 },
+    health: { max: 1000 },
     maxHealth: 1000,
     currentHealth: 1000,
     attack: 100,
@@ -828,10 +824,10 @@ const legendaryEnemies: Enemy[] = [
     },
     stats: { strength: 30, dexterity: 24, constitution: 28, intelligence: 30, wisdom: 30, charisma: 32 },
     attacks: [
-      { name: 'Genesis Breath', damage: 100, description: 'Breath that can create or destroy worlds' },
-      { name: 'Divine Claw', damage: 85, description: 'Claws blessed with the power of creation' },
-      { name: 'Reality Shaper', damage: 90, description: 'Reshapes the battlefield itself' },
-      { name: 'Cosmic Roar', damage: 0, description: 'A roar that echoes across dimensions' }
+      { name: 'Genesis Breath', damage: '100', description: 'Breath that can create or destroy worlds' },
+      { name: 'Divine Claw', damage: '85', description: 'Claws blessed with the power of creation' },
+      { name: 'Reality Shaper', damage: '90', description: 'Reshapes the battlefield itself' },
+      { name: 'Cosmic Roar', damage: '0', description: 'A roar that echoes across dimensions' }
     ]
   }
 ];

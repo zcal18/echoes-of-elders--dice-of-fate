@@ -142,6 +142,13 @@ export interface Enemy {
   level: number;
   requiredLevel: number;
   health: { max: number };
+  maxHealth: number;
+  currentHealth: number;
+  attack: number;
+  defense: number;
+  experience: number;
+  gold: number;
+  difficulty: 'normal' | 'elite' | 'boss' | 'legendary' | 'mythic';
   stats: {
     strength: number;
     dexterity: number;
@@ -166,6 +173,7 @@ export interface Enemy {
   weaknesses?: string[];
   resistances?: string[];
   imageUrl?: string;
+  image?: string;
   lore?: string;
 }
 
