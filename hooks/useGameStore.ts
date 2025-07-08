@@ -2216,52 +2216,109 @@ export const useGameStore = create<GameState>()(
       
       // Admin Functions
       logout: () => {
-        set({
+        // FIXED: Don't clear character data on logout - only clear session data
+        set((state: GameState) => ({
+          // Keep character data persistent
+          characters: state.characters,
+          diamonds: state.diamonds,
+          guilds: state.guilds,
+          completedResearch: state.completedResearch,
+          activeResearch: state.activeResearch,
+          pvpRanking: state.pvpRanking,
+          mailbox: state.mailbox,
+          
+          // Clear session-only data
           isAuthenticated: false,
           username: '',
-          characters: [],
           activeCharacter: null,
           userRole: 'player',
           activeChannel: 'general',
           activeParty: null,
-          diamonds: 100,
-          mailbox: [],
           chatPopout: false,
           selectedOpponent: null,
           pvpQueue: [],
           activePvpMatch: null,
-          pvpRanking: 1000,
           onlineUsers: [],
           guildBattles: [],
-          activeGuildBattle: null
-        });
+          activeGuildBattle: null,
+          notifications: [],
+          friendsList: [],
+          onlineFriends: [],
+          
+          // Reset non-persisted data to initial state
+          territories: initialTerritories,
+          researchItems: initialResearch,
+          shopItems: shopItems.map((item: ShopItem) => ({ ...item, stock: item.stock || 10 })),
+          chatLobbies: [
+            {
+              id: 'general',
+              name: 'General',
+              description: 'Main chat room for all players',
+              type: 'default',
+              createdAt: Date.now(),
+              members: [],
+              messages: [],
+              isPrivate: false
+            },
+            {
+              id: 'help',
+              name: 'Help',
+              description: 'Get help from other players',
+              type: 'default',
+              createdAt: Date.now(),
+              members: [],
+              messages: [],
+              isPrivate: false
+            },
+            {
+              id: 'trading',
+              name: 'Trading',
+              description: 'Buy and sell items with other players',
+              type: 'default',
+              createdAt: Date.now(),
+              members: [],
+              messages: [],
+              isPrivate: false
+            },
+            {
+              id: 'guild-recruitment',
+              name: 'Guild Recruitment',
+              description: 'Find or advertise guilds',
+              type: 'default',
+              createdAt: Date.now(),
+              members: [],
+              messages: [],
+              isPrivate: false
+            }
+          ],
+          availableEnemies: []
+        }));
       }
     }),
     {
       name: 'echoes-of-elders-storage',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
-        // Authentication
-        isAuthenticated: state.isAuthenticated,
+        // Authentication - persist username but not auth status
         username: state.username,
         
-        // Complete Character Management
+        // Complete Character Management - ALWAYS PERSIST
         characters: state.characters,
         
-        // Currency
+        // Currency - ALWAYS PERSIST
         diamonds: state.diamonds,
         
-        // Guild Data
+        // Guild Data - ALWAYS PERSIST
         guilds: state.guilds,
         
-        // Research progress
+        // Research progress - ALWAYS PERSIST
         completedResearch: state.completedResearch,
         activeResearch: state.activeResearch,
         
-        // PVP State
+        // PVP State - ALWAYS PERSIST
         pvpRanking: state.pvpRanking,
         
-        // Mail System
+        // Mail System - ALWAYS PERSIST
         mailbox: state.mailbox
       }),
       
@@ -2332,25 +2389,10 @@ export const useGameStore = create<GameState>()(
           state.onlineFriends = [];
           state.userRole = 'player';
           
-          // Set active character to first character if available
-          if (state.characters && state.characters.length > 0) {
-            const firstCharacter = state.characters[0];
-            state.activeCharacter = {
-              ...firstCharacter,
-              inventory: firstCharacter.inventory || [],
-              equipment: firstCharacter.equipment || {},
-              buffs: firstCharacter.buffs || [],
-              debuffs: firstCharacter.debuffs || [],
-              unlockedSpells: firstCharacter.unlockedSpells || [],
-              unlockedItems: firstCharacter.unlockedItems || [],
-              currentHealth: firstCharacter.currentHealth || firstCharacter.health?.current || firstCharacter.maxHealth || 50,
-              maxHealth: firstCharacter.maxHealth || firstCharacter.health?.max || 50,
-              armorClass: firstCharacter.armorClass || 10,
-              damageDie: firstCharacter.damageDie || 4
-            };
-          } else {
-            state.activeCharacter = null;
-          }
+          // IMPORTANT: Don't auto-authenticate or set active character
+          // Let the user log in again, but their characters will be preserved
+          state.isAuthenticated = false;
+          state.activeCharacter = null;
         }
       }
     }
