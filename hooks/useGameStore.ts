@@ -254,96 +254,6 @@ const calculateTotalStats = (baseStats: any, equipment: any) => {
   return totalStats;
 };
 
-// Enhanced persistence interface with complete character data
-interface PersistedState {
-  // Authentication
-  isAuthenticated: boolean;
-  username: string;
-  
-  // Complete Character Management - now includes ALL character data
-  characters: Character[];
-  activeCharacterId?: string;
-  
-  // Currency
-  diamonds: number;
-  
-  // Guild Data
-  guilds: Guild[];
-  
-  // Research progress
-  completedResearch: Research[];
-  activeResearch: Research[];
-  
-  // PVP State
-  pvpRanking: number;
-  
-  // Mail System
-  mailbox: Mail[];
-  
-  // Persistence metadata for debugging
-  lastSaved: number;
-  version: string;
-}
-
-// Custom storage with error handling and backup
-const createEnhancedStorage = () => {
-  const BACKUP_KEY = 'echoes-of-elders-backup';
-  const MAX_BACKUPS = 3;
-  
-  return {
-    getItem: async (name: string): Promise<string | null> => {
-      try {
-        const item = await AsyncStorage.getItem(name);
-        if (item) {
-          // Validate JSON before returning
-          JSON.parse(item);
-          return item;
-        }
-        return null;
-      } catch (error) {
-        console.error('Storage getItem error:', error);
-        // Try to restore from backup
-        try {
-          const backup = await AsyncStorage.getItem(BACKUP_KEY);
-          if (backup) {
-            console.log('Restoring from backup...');
-            return backup;
-          }
-        } catch (backupError) {
-          console.error('Backup restore failed:', backupError);
-        }
-        return null;
-      }
-    },
-    
-    setItem: async (name: string, value: string): Promise<void> => {
-      try {
-        // Validate JSON before saving
-        JSON.parse(value);
-        
-        // Create backup before saving new data
-        const existingData = await AsyncStorage.getItem(name);
-        if (existingData) {
-          await AsyncStorage.setItem(BACKUP_KEY, existingData);
-        }
-        
-        await AsyncStorage.setItem(name, value);
-      } catch (error) {
-        console.error('Storage setItem error:', error);
-        throw error;
-      }
-    },
-    
-    removeItem: async (name: string): Promise<void> => {
-      try {
-        await AsyncStorage.removeItem(name);
-      } catch (error) {
-        console.error('Storage removeItem error:', error);
-      }
-    }
-  };
-};
-
 export const useGameStore = create<GameState>()(
   persist(
     (set, get) => ({
@@ -2329,16 +2239,14 @@ export const useGameStore = create<GameState>()(
     }),
     {
       name: 'echoes-of-elders-storage',
-      storage: createEnhancedStorage(),
-      // Now persist complete character data including inventory and equipment
+      storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         // Authentication
         isAuthenticated: state.isAuthenticated,
         username: state.username,
         
-        // Complete Character Management - now includes ALL character data
+        // Complete Character Management
         characters: state.characters,
-        activeCharacterId: state.activeCharacter?.id,
         
         // Currency
         diamonds: state.diamonds,
@@ -2346,7 +2254,7 @@ export const useGameStore = create<GameState>()(
         // Guild Data
         guilds: state.guilds,
         
-        // Research progress - complete objects
+        // Research progress
         completedResearch: state.completedResearch,
         activeResearch: state.activeResearch,
         
@@ -2354,44 +2262,14 @@ export const useGameStore = create<GameState>()(
         pvpRanking: state.pvpRanking,
         
         // Mail System
-        mailbox: state.mailbox,
-        
-        // Persistence metadata
-        lastSaved: Date.now(),
-        version: '2.0.0'
-      } as PersistedState),
+        mailbox: state.mailbox
+      }),
       
-      // Enhanced rehydration with error handling
       onRehydrateStorage: () => (state, error) => {
         if (error) {
           console.error('Failed to rehydrate storage:', error);
-          // Could implement fallback logic here
         } else if (state) {
           console.log('Storage rehydrated successfully');
-          
-          // Restore active character from persisted ID
-          if (state.activeCharacterId && state.characters) {
-            const activeChar = state.characters.find(c => c.id === state.activeCharacterId);
-            if (activeChar) {
-              // Ensure all character properties exist
-              const restoredCharacter = {
-                ...activeChar,
-                inventory: activeChar.inventory || [],
-                equipment: activeChar.equipment || {},
-                buffs: activeChar.buffs || [],
-                debuffs: activeChar.debuffs || [],
-                unlockedSpells: activeChar.unlockedSpells || [],
-                unlockedItems: activeChar.unlockedItems || [],
-                currentHealth: activeChar.currentHealth || activeChar.health?.current || activeChar.maxHealth || 50,
-                maxHealth: activeChar.maxHealth || activeChar.health?.max || 50,
-                armorClass: activeChar.armorClass || 10,
-                damageDie: activeChar.damageDie || 4
-              };
-              
-              // Set the active character
-              state.activeCharacter = restoredCharacter;
-            }
-          }
           
           // Initialize non-persisted state
           state.territories = initialTerritories;
@@ -2453,18 +2331,28 @@ export const useGameStore = create<GameState>()(
           state.friendsList = [];
           state.onlineFriends = [];
           state.userRole = 'player';
+          
+          // Set active character to first character if available
+          if (state.characters && state.characters.length > 0) {
+            const firstCharacter = state.characters[0];
+            state.activeCharacter = {
+              ...firstCharacter,
+              inventory: firstCharacter.inventory || [],
+              equipment: firstCharacter.equipment || {},
+              buffs: firstCharacter.buffs || [],
+              debuffs: firstCharacter.debuffs || [],
+              unlockedSpells: firstCharacter.unlockedSpells || [],
+              unlockedItems: firstCharacter.unlockedItems || [],
+              currentHealth: firstCharacter.currentHealth || firstCharacter.health?.current || firstCharacter.maxHealth || 50,
+              maxHealth: firstCharacter.maxHealth || firstCharacter.health?.max || 50,
+              armorClass: firstCharacter.armorClass || 10,
+              damageDie: firstCharacter.damageDie || 4
+            };
+          } else {
+            state.activeCharacter = null;
+          }
         }
-      },
-      
-      // Merge function to handle state updates properly
-      merge: (persistedState, currentState) => ({
-        ...currentState,
-        ...persistedState,
-        // Ensure active character is properly restored
-        activeCharacter: persistedState.activeCharacterId && persistedState.characters
-          ? persistedState.characters.find(c => c.id === persistedState.activeCharacterId) || null
-          : null
-      })
+      }
     }
   )
 );
