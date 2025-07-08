@@ -145,17 +145,10 @@ export interface ShopItem {
   stock: number;
 }
 
-export interface FamiliarType {
-  sprite: string;
-  raven: string;
-  wolf: string;
-  golem: string;
-  dragon: string;
-  phoenix: string;
-}
+export type FamiliarType = 'sprite' | 'raven' | 'wolf' | 'golem' | 'dragon' | 'phoenix';
 
 export interface Familiar {
-  type: keyof FamiliarType;
+  type: FamiliarType;
   name: string;
   level: number;
   loyalty: number;
@@ -451,8 +444,8 @@ export interface GameState {
   handleDefeat: () => void;
   
   // Familiar Functions
-  canSummonFamiliar: (type: keyof FamiliarType) => { canSummon: boolean; reason: string; cost: number };
-  summonFamiliar: (type: keyof FamiliarType, name: string) => boolean;
+  canSummonFamiliar: (type: FamiliarType) => { canSummon: boolean; reason: string; cost: number };
+  summonFamiliar: (type: FamiliarType, name: string) => boolean;
   dismissFamiliar: () => void;
   
   // Party Functions

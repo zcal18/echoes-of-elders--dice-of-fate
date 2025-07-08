@@ -125,7 +125,7 @@ export default function ChatSystem() {
         
         ws.onerror = (error) => {
           console.error('WebSocket error:', error);
-          setSubscriptionError('Connection error occurred');
+          setSubscriptionError(null); // Don't show error to user
           setConnectionStatus('disconnected');
         };
         
@@ -139,7 +139,7 @@ export default function ChatSystem() {
         };
       } else {
         setConnectionStatus('disconnected');
-        setSubscriptionError('Failed to establish WebSocket connection');
+        setSubscriptionError(null); // Don't show error to user
       }
       
       connectToChat(activeCharacter.id, activeCharacter.name);
@@ -438,18 +438,12 @@ export default function ChatSystem() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={[styles.container, chatPopout && Platform.OS === 'web' && styles.popoutContainer]}>
-        {/* Connection Status */}
-        {subscriptionError && (
-          <View style={styles.connectionWarning}>
-            <Text style={styles.connectionWarningText}>{subscriptionError}</Text>
-          </View>
-        )}
-        
-        {Platform.OS === 'web' && (
+        {/* Connection Status - Only show on web and when disconnected */}
+        {Platform.OS === 'web' && connectionStatus !== 'connected' && (
           <View style={styles.connectionStatus}>
-            <View style={[styles.connectionIndicator, { backgroundColor: connectionStatus === 'connected' ? colors.success : colors.error }]} />
+            <View style={[styles.connectionIndicator, { backgroundColor: connectionStatus === 'connected' ? colors.success : colors.warning }]} />
             <Text style={styles.connectionText}>
-              {connectionStatus === 'connected' ? 'Connected' : connectionStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
+              {connectionStatus === 'connecting' ? 'Connecting...' : 'Offline Mode'}
             </Text>
           </View>
         )}
@@ -852,19 +846,6 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 20,
   },
-  connectionWarning: {
-    backgroundColor: colors.warning + '20',
-    borderColor: colors.warning,
-    borderWidth: 1,
-    padding: 8,
-    margin: 8,
-    borderRadius: 6,
-  },
-  connectionWarningText: {
-    color: colors.warning,
-    fontSize: 12,
-    textAlign: 'center',
-  },
   connectionStatus: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -883,7 +864,7 @@ const styles = StyleSheet.create({
   },
   sidebar: {
     borderRightWidth: 1,
-    borderRightColor: colors.textSecondary,
+    borderRightColor: colors.border,
     backgroundColor: colors.surface,
     height: '100%',
   },
@@ -893,7 +874,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.textSecondary,
+    borderBottomColor: colors.border,
   },
   channelHeaderText: {
     fontSize: 16,
@@ -942,7 +923,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.textSecondary,
+    borderBottomColor: colors.border,
     backgroundColor: colors.surface,
   },
   toggleSidebarButton: {
@@ -984,7 +965,7 @@ const styles = StyleSheet.create({
   },
   membersPanel: {
     borderLeftWidth: 1,
-    borderLeftColor: colors.textSecondary,
+    borderLeftColor: colors.border,
     backgroundColor: colors.surface,
     padding: 12,
     height: '100%',
@@ -1105,7 +1086,7 @@ const styles = StyleSheet.create({
     padding: 8,
     gap: 6,
     borderTopWidth: 1,
-    borderTopColor: colors.textSecondary,
+    borderTopColor: colors.border,
     alignItems: 'flex-end',
     backgroundColor: colors.surface,
   },
@@ -1144,7 +1125,7 @@ const styles = StyleSheet.create({
     maxHeight: 60,
     minHeight: 32,
     borderWidth: 1,
-    borderColor: colors.textSecondary,
+    borderColor: colors.border,
     fontSize: 14,
   },
   desktopInput: {
