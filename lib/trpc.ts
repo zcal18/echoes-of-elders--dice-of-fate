@@ -107,11 +107,41 @@ export const connectWebSocket = (userId: string, userName: string, channelId: st
     };
     
     wsConnection.onerror = (event) => {
+      // Improved error logging to extract actual error details
+      let errorDetails = 'Unknown WebSocket error';
+      
+      try {
+        if (event instanceof ErrorEvent) {
+          errorDetails = `ErrorEvent: ${event.message || 'No message'}`;
+          if (event.error) {
+            errorDetails += ` | Error: ${String(event.error)}`;
+          }
+        } else if (event && typeof event === 'object') {
+          // Try to extract meaningful error information
+          const eventProps = [];
+          if ('type' in event) eventProps.push(`type: ${event.type}`);
+          if ('target' in event && event.target) {
+            const target = event.target as any;
+            if (target.readyState !== undefined) eventProps.push(`readyState: ${target.readyState}`);
+            if (target.url) eventProps.push(`url: ${target.url}`);
+          }
+          if ('message' in event) eventProps.push(`message: ${event.message}`);
+          if ('error' in event) eventProps.push(`error: ${event.error}`);
+          
+          errorDetails = eventProps.length > 0 ? eventProps.join(', ') : 'Event object with no extractable details';
+        } else {
+          errorDetails = `Event type: ${typeof event}, value: ${String(event)}`;
+        }
+      } catch (extractError) {
+        errorDetails = `Error extracting details: ${extractError instanceof Error ? extractError.message : String(extractError)}`;
+      }
+      
       console.error('WebSocket connection error:', {
-        type: event.type,
+        errorDetails,
         readyState: wsConnection?.readyState,
         url: wsConnection?.url,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        reconnectAttempts
       });
       
       // Only attempt to reconnect if not manually disconnected and haven't exceeded max attempts
@@ -139,9 +169,13 @@ export const connectWebSocket = (userId: string, userName: string, channelId: st
     
     return wsConnection;
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
     console.error('Failed to create WebSocket connection:', {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
+      errorMessage,
+      errorStack,
+      timestamp: new Date().toISOString()
     });
     
     // Schedule reconnect on connection creation failure
@@ -183,9 +217,8 @@ export const disconnectWebSocket = (userId: string) => {
       console.log('Sending leave message:', leaveMessage);
       wsConnection.send(JSON.stringify(leaveMessage));
     } catch (error) {
-      console.error('Error sending leave message:', {
-        error: error instanceof Error ? error.message : String(error)
-      });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error sending leave message:', { errorMessage });
     }
     
     wsConnection.close(1000, 'User disconnecting');
@@ -202,10 +235,8 @@ export const sendWebSocketMessage = (message: any) => {
       wsConnection.send(JSON.stringify(message));
       return true;
     } catch (error) {
-      console.error('Error sending WebSocket message:', {
-        error: error instanceof Error ? error.message : String(error),
-        message
-      });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error sending WebSocket message:', { errorMessage, message });
       return false;
     }
   } else {

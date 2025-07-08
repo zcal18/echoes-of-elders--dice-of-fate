@@ -164,11 +164,32 @@ export default function ChatSystem() {
         };
         
         ws.onerror = (event) => {
+          // Improved error logging to extract actual error details
+          let errorMessage = 'Unknown WebSocket error';
+          
+          if (event instanceof ErrorEvent) {
+            errorMessage = event.message || event.error?.toString() || 'ErrorEvent occurred';
+          } else if (event && typeof event === 'object') {
+            // Try to extract meaningful error information
+            if ('message' in event) {
+              errorMessage = String(event.message);
+            } else if ('error' in event) {
+              errorMessage = String(event.error);
+            } else if ('type' in event) {
+              errorMessage = `WebSocket ${event.type} event`;
+            } else {
+              errorMessage = JSON.stringify(event, null, 2);
+            }
+          }
+          
           console.error('WebSocket error in ChatSystem:', {
-            type: event.type,
+            errorMessage,
+            eventType: event?.type || 'unknown',
             readyState: ws.readyState,
-            url: ws.url
+            url: ws.url,
+            timestamp: new Date().toISOString()
           });
+          
           setConnectionStatus('error');
           addNotification('Connection error. Retrying...', 'error');
         };
