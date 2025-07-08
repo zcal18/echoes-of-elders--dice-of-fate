@@ -15,6 +15,11 @@ const colors = {
   surfaceLight: '#334155',
   surfaceDark: '#0F172A',
   
+  // Border colors
+  border: '#334155',
+  borderLight: '#475569',
+  borderDark: '#1E293B',
+  
   // Text colors
   text: '#F8FAFC',
   textSecondary: '#CBD5E1',
