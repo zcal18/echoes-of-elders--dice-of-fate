@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Modal } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useGameStore } from '@/hooks/useGameStore';
 import colors from '@/constants/colors';
-import { Sword, Shield, Users, MessageSquare } from 'lucide-react-native';
+import { Sword, Shield, Users, MessageSquare, User } from 'lucide-react-native';
 import NotificationSystem from '@/components/NotificationSystem';
+import ReactivePlayerCard from '@/components/Game/ReactivePlayerCard';
 
 const { width: screenWidth } = Dimensions.get('window');
 const isTablet = screenWidth > 768;
@@ -19,6 +20,8 @@ export default function HomeScreen() {
     activeParty,
     guilds
   } = useGameStore();
+  
+  const [showCharacterCard, setShowCharacterCard] = useState(false);
   
   // Fix: Move navigation logic to useEffect to prevent setState during render
   useEffect(() => {
@@ -90,6 +93,27 @@ export default function HomeScreen() {
     }
     const characterClass = activeCharacter.class || "Unknown Class";
     return characterClass.charAt(0).toUpperCase() + characterClass.slice(1).toLowerCase();
+  };
+  
+  // Convert Character to CombatParticipant format for ReactivePlayerCard
+  const convertToCombatParticipant = () => {
+    return {
+      id: activeCharacter.id,
+      name: activeCharacter.name,
+      level: activeCharacter.level,
+      race: activeCharacter.race,
+      class: activeCharacter.class,
+      health: activeCharacter.health,
+      mana: activeCharacter.mana,
+      stats: activeCharacter.stats,
+      isPlayer: true,
+      buffs: activeCharacter.buffs || [],
+      debuffs: activeCharacter.debuffs || [],
+      profileImage: activeCharacter.profileImage,
+      customRace: activeCharacter.customRace,
+      customClass: activeCharacter.customClass,
+      lastDiceRoll: activeCharacter.lastDiceRoll
+    };
   };
   
   const guildInfo = getGuildInfo();
@@ -334,6 +358,15 @@ export default function HomeScreen() {
               <Text style={styles.actionTitle}>Chat</Text>
               <Text style={styles.actionSubtitle}>Talk to players</Text>
             </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.actionCard, styles.characterCardAction]}
+              onPress={() => setShowCharacterCard(true)}
+            >
+              <User size={isTablet ? 32 : 24} color={colors.text} />
+              <Text style={styles.actionTitle}>Character Card</Text>
+              <Text style={styles.actionSubtitle}>View detailed card</Text>
+            </TouchableOpacity>
           </View>
         </View>
         
@@ -356,6 +389,36 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
+      
+      {/* Character Card Modal */}
+      <Modal
+        visible={showCharacterCard}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowCharacterCard(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Character Card</Text>
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => setShowCharacterCard(false)}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.cardContainer}>
+              <ReactivePlayerCard
+                participant={convertToCombatParticipant()}
+                isActive={true}
+                isAnimating={false}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -516,12 +579,12 @@ const styles = StyleSheet.create({
   },
   healthValue: {
     fontSize: isTablet ? 14 : 12,
-    color: colors.health,
+    color: '#e74c3c',
     fontWeight: 'bold',
   },
   manaValue: {
     fontSize: isTablet ? 14 : 12,
-    color: colors.mana,
+    color: '#3498db',
     fontWeight: 'bold',
   },
   currencySection: {
@@ -600,10 +663,10 @@ const styles = StyleSheet.create({
     borderRadius: isTablet ? 4 : 3,
   },
   healthProgress: {
-    backgroundColor: colors.health,
+    backgroundColor: '#e74c3c',
   },
   manaProgress: {
-    backgroundColor: colors.mana,
+    backgroundColor: '#3498db',
   },
   experienceCard: {
     backgroundColor: colors.background,
@@ -626,7 +689,7 @@ const styles = StyleSheet.create({
   },
   experienceProgress: {
     height: '100%',
-    backgroundColor: colors.experience,
+    backgroundColor: '#f39c12',
     borderRadius: isTablet ? 6 : 4,
   },
   experienceText: {
@@ -707,6 +770,10 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: colors.warning,
   },
+  characterCardAction: {
+    borderLeftWidth: 4,
+    borderLeftColor: colors.secondary,
+  },
   actionTitle: {
     fontSize: isTablet ? 16 : 14,
     fontWeight: 'bold',
@@ -747,5 +814,51 @@ const styles = StyleSheet.create({
     fontSize: isTablet ? 14 : 12,
     color: colors.textSecondary,
     lineHeight: isTablet ? 20 : 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: 20,
+    maxWidth: isTablet ? 400 : 320,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: isTablet ? 20 : 18,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceDark,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    fontSize: 18,
+    color: colors.text,
+    fontWeight: 'bold',
+  },
+  cardContainer: {
+    alignItems: 'center',
   },
 });
