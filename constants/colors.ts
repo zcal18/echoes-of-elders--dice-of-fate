@@ -22,9 +22,13 @@ export default {
   
   // Status colors
   success: '#10B981',
+  successLight: '#D1FAE5',
   error: '#EF4444',
+  errorLight: '#FEE2E2',
   warning: '#F59E0B',
+  warningLight: '#FEF3C7',
   info: '#3B82F6',
+  infoLight: '#DBEAFE',
   
   // Game-specific colors
   health: '#EF4444',
