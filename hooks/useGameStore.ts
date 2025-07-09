@@ -1,125 +1,225 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GameState, ChatMessage, ChatLobby, Character, ShopItem, Enemy, FamiliarType, Item, Guild, Party, Friend, CreateCharacterInput, Territory, Mail, Research, PvpPlayer, PvpMatch, OnlineUser, GuildBattle, EnemyEditorData, GuildRole, GuildRoleInfo } from '@/types/game';
-import { shopItems } from '@/constants/items';
-import { getAllEnemies } from '@/constants/enemies';
-import { races, classes, spells } from '@/constants/gameData';
+import { 
+  Character, 
+  Item, 
+  Enemy, 
+  ChatMessage, 
+  ChatLobby, 
+  OnlineUser, 
+  Guild, 
+  Party, 
+  Friend, 
+  Territory,
+  GuildBattle,
+  Research,
+  GuildRole,
+  Familiar
+} from '@/types/game';
+import { initialItems } from '@/constants/items';
+import { familiarTypes } from '@/constants/gameData';
 
-const familiarCosts: Record<FamiliarType, number> = {
-  sprite: 50,
-  raven: 75,
-  wolf: 100,
-  golem: 150,
-  dragon: 300,
-  phoenix: 500
-};
+interface GameState {
+  // Authentication
+  isAuthenticated: boolean;
+  userRole: 'player' | 'admin';
+  
+  // Characters
+  characters: Character[];
+  activeCharacter: Character | null;
+  
+  // Game resources
+  diamonds: number;
+  
+  // Chat system
+  activeChannel: string;
+  chatLobbies: ChatLobby[];
+  chatPopout: boolean;
+  onlineUsers: OnlineUser[];
+  
+  // Social features
+  guilds: Guild[];
+  activeParty: Party | null;
+  friendsList: Friend[];
+  onlineFriends: string[];
+  
+  // Kingdom system
+  territories: Territory[];
+  guildBattles: GuildBattle[];
+  activeGuildBattle: GuildBattle | null;
+  royalSpireUnlocked: boolean;
+  
+  // Research system
+  activeResearch: Research[];
+  completedResearch: Research[];
+  
+  // Notifications
+  notifications: Array<{
+    id: string;
+    message: string;
+    type: 'success' | 'error' | 'warning' | 'info';
+    timestamp: number;
+  }>;
+  
+  // Actions
+  login: (username: string, password: string) => boolean;
+  logout: () => void;
+  register: (username: string, email: string, password: string) => boolean;
+  
+  // Character management
+  createCharacter: (character: Omit<Character, 'id' | 'createdAt'>) => void;
+  setActiveCharacter: (characterId: string) => void;
+  updateCharacter: (characterId: string, updates: Partial<Character>) => void;
+  deleteCharacter: (characterId: string) => void;
+  gainExperience: (amount: number) => void;
+  gainGold: (amount: number) => void;
+  spendGold: (amount: number) => boolean;
+  updateCharacterHealth: (characterId: string, newHealth: number) => void;
+  
+  // Inventory management
+  addItemToInventory: (item: Item) => void;
+  removeItemFromInventory: (itemId: string) => void;
+  equipItem: (itemId: string, slot: string) => void;
+  unequipItem: (slot: string) => void;
+  useItem: (itemId: string) => boolean;
+  
+  // Chat actions
+  setActiveChannel: (channelId: string) => void;
+  addChatMessage: (message: ChatMessage) => void;
+  createChatLobby: (name: string, description: string, isPrivate: boolean) => void;
+  joinChatLobby: (lobbyId: string) => void;
+  leaveChatLobby: (lobbyId: string) => void;
+  cleanupEmptyLobbies: () => void;
+  addReactionToMessage: (messageId: string, emoji: string) => void;
+  kickFromChat: (userId: string, channelId: string) => void;
+  banUser: (userId: string, channelId: string) => void;
+  setChatPopout: (popout: boolean) => void;
+  connectToChat: (userId: string, userName: string) => void;
+  disconnectFromChat: (userId: string) => void;
+  updateUserPresence: (userId: string, isOnline: boolean, channelId?: string) => void;
+  
+  // Guild management
+  createGuild: (name: string, description: string, clanTag: string) => void;
+  joinGuild: (guildId: string) => void;
+  leaveGuild: () => void;
+  assignGuildRole: (guildId: string, characterId: string, role: GuildRole) => void;
+  removeGuildRole: (guildId: string, characterId: string) => void;
+  getGuildRoleInfo: (role: GuildRole) => { emoji: string; buffs: { [key: string]: number }; description: string };
+  
+  // Party management
+  createParty: (name: string) => void;
+  leaveParty: () => void;
+  
+  // Friend management
+  addFriend: (playerName: string) => boolean;
+  removeFriend: (friendId: string) => void;
+  
+  // Kingdom management
+  claimTerritory: (territoryId: string, guildId: string) => void;
+  checkRoyalSpireUnlock: () => void;
+  initiateGuildBattle: (territoryId: string, attackingGuildId: string) => void;
+  joinGuildBattle: (battleId: string, side: 'attacker' | 'defender') => void;
+  startGuildBattle: (battleId: string) => void;
+  
+  // Research system
+  getAvailableResearch: () => Research[];
+  startResearch: (researchId: string) => boolean;
+  completeResearch: (researchId: string) => boolean;
+  skipResearchWithDiamonds: (researchId: string) => boolean;
+  
+  // Familiar system
+  canSummonFamiliar: (type: string) => { canSummon: boolean; reason: string; cost: number };
+  summonFamiliar: (type: string, name: string) => boolean;
+  dismissFamiliar: () => void;
+  
+  // Notifications
+  addNotification: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
+  removeNotification: (id: string) => void;
+  clearNotifications: () => void;
+}
 
-const familiarLevelRequirements: Record<FamiliarType, number> = {
-  sprite: 1,
-  raven: 5,
-  wolf: 10,
-  golem: 15,
-  dragon: 25,
-  phoenix: 35
-};
-
-// Royal Guild Role Information
-const guildRoleInfo: Record<GuildRole, GuildRoleInfo> = {
-  King: {
-    role: 'King',
-    emoji: '👑',
-    buffs: {
-      strength: 5,
-      charisma: 5,
-      leadership: 10
-    },
-    description: 'The supreme ruler of the kingdom, grants massive combat and leadership bonuses'
-  },
-  Queen: {
-    role: 'Queen',
-    emoji: '👸',
-    buffs: {
-      wisdom: 5,
-      intelligence: 5,
-      diplomacy: 10
-    },
-    description: 'The wise queen, grants magical and diplomatic bonuses'
-  },
-  Knight: {
-    role: 'Knight',
-    emoji: '⚔️',
-    buffs: {
-      strength: 4,
-      constitution: 4,
-      combat: 8
-    },
-    description: 'The royal knight, grants significant combat and defensive bonuses'
-  },
-  Bishop: {
-    role: 'Bishop',
-    emoji: '🛡️',
-    buffs: {
-      wisdom: 4,
-      intelligence: 3,
-      healing: 8
-    },
-    description: 'The holy bishop, grants magical and healing bonuses'
-  },
-  Member: {
-    role: 'Member',
-    emoji: '',
-    buffs: {},
-    description: 'Regular guild member'
-  }
-};
-
-// Enhanced territory data for 8x8 grid
+// Initial territories for the kingdom map
 const initialTerritories: Territory[] = [
-  // Row 0
-  { id: 'northport', name: 'Northport', type: 'plains', position: { x: 1, y: 0 }, description: 'A bustling trading port at the northern edge of the kingdom.', defenseStrength: 8, strategicValue: 12, resources: ['Trade', 'Fish'], lore: 'Founded by merchant sailors, Northport serves as the gateway to northern lands. Its harbors are always filled with ships from distant realms.', isClaimable: true },
-  { id: 'crystal_lake', name: 'Crystal Lake', type: 'water', position: { x: 3, y: 0 }, description: 'A pristine lake with magical properties.', defenseStrength: 0, strategicValue: 8, resources: ['Magic', 'Water'], lore: 'The crystal-clear waters are said to enhance magical abilities and provide visions of the future.', isClaimable: false },
-  { id: 'frostpeak', name: 'Frostpeak', type: 'mountain', position: { x: 6, y: 0 }, description: 'The highest mountain in the realm, perpetually snow-capped.', defenseStrength: 15, strategicValue: 10, resources: ['Stone', 'Ice'], lore: 'Ancient dragons once nested in these peaks. The summit is said to touch the realm of the gods.', isClaimable: true },
-  
   // Row 1
-  { id: 'whispering_woods', name: 'Whispering Woods', type: 'forest', position: { x: 0, y: 1 }, description: 'An ancient forest where the trees seem to whisper secrets.', defenseStrength: 10, strategicValue: 9, resources: ['Wood', 'Herbs'], lore: 'Druids claim the trees here are sentient, sharing wisdom with those who know how to listen.', isClaimable: true },
-  { id: 'goldmeadow', name: 'Goldmeadow', type: 'plains', position: { x: 2, y: 1 }, description: 'Fertile farmlands that feed much of the kingdom.', defenseStrength: 5, strategicValue: 11, resources: ['Food', 'Gold'], lore: 'The soil here is blessed by harvest gods, yielding crops that seem to grow overnight.', isClaimable: true },
-  { id: 'ironhold', name: 'Ironhold', type: 'mountain', position: { x: 5, y: 1 }, description: 'A fortress built into the mountainside, rich in iron ore.', defenseStrength: 18, strategicValue: 13, resources: ['Iron', 'Stone'], lore: 'Dwarven miners carved this stronghold from living rock. Its forges never cool.', isClaimable: true },
-  { id: 'shadowmere', name: 'Shadowmere', type: 'water', position: { x: 7, y: 1 }, description: 'A dark lake shrouded in perpetual mist.', defenseStrength: 0, strategicValue: 6, resources: ['Mystery', 'Shadow'], lore: 'Strange creatures are said to dwell in its depths, and few who enter the mist return unchanged.', isClaimable: false },
-  
+  { id: 'water_1', name: 'Northern Seas', type: 'water', position: { x: 0, y: 0 }, isClaimable: false, description: 'Vast northern waters', lore: 'Ancient waters that have witnessed countless naval battles', strategicValue: 5, defenseStrength: 0, resources: ['Fish', 'Pearls'] },
+  { id: 'forest_1', name: 'Whispering Woods', type: 'forest', position: { x: 1, y: 0 }, isClaimable: true, description: 'Dense mystical forest', lore: 'Trees that whisper secrets of old magic', strategicValue: 8, defenseStrength: 12, resources: ['Timber', 'Herbs'] },
+  { id: 'mountain_1', name: 'Ironpeak', type: 'mountain', position: { x: 2, y: 0 }, isClaimable: true, description: 'Towering mountain fortress', lore: 'Ancient dwarven stronghold carved into living rock', strategicValue: 12, defenseStrength: 18, resources: ['Iron', 'Gems'] },
+  { id: 'forest_2', name: 'Silverleaf Grove', type: 'forest', position: { x: 3, y: 0 }, isClaimable: true, description: 'Sacred elven grove', lore: 'Where the first elves learned the songs of nature', strategicValue: 9, defenseStrength: 10, resources: ['Silverleaf', 'Moonstone'] },
+  { id: 'water_2', name: 'Eastern Bay', type: 'water', position: { x: 4, y: 0 }, isClaimable: false, description: 'Strategic eastern waters', lore: 'Gateway to distant lands across the sea', strategicValue: 6, defenseStrength: 0, resources: ['Fish', 'Salt'] },
+  { id: 'desert_1', name: 'Sunscorch Dunes', type: 'desert', position: { x: 5, y: 0 }, isClaimable: true, description: 'Burning desert sands', lore: 'Where the sun god first touched the earth', strategicValue: 7, defenseStrength: 8, resources: ['Sand Glass', 'Spices'] },
+  { id: 'castle_1', name: 'Stormwatch Keep', type: 'castle', position: { x: 6, y: 0 }, isClaimable: true, description: 'Ancient border fortress', lore: 'Built to watch for storms both natural and magical', strategicValue: 15, defenseStrength: 25, resources: ['Stone', 'Steel'] },
+  { id: 'water_3', name: 'Stormbreak Strait', type: 'water', position: { x: 7, y: 0 }, isClaimable: false, description: 'Treacherous strait', lore: 'Where many ships have met their doom', strategicValue: 4, defenseStrength: 0, resources: ['Salvage', 'Coral'] },
+
   // Row 2
-  { id: 'wyngarde_manor', name: 'Wyngarde Manor', type: 'castle', position: { x: 0, y: 2 }, description: 'An ancient noble estate with towering spires and fortified walls.', defenseStrength: 20, strategicValue: 14, resources: ['Noble Heritage', 'Ancient Knowledge'], lore: 'Once home to the legendary Wyngarde family, this manor holds secrets of old nobility and forgotten magics. Its libraries contain tomes that predate the kingdom itself.', isClaimable: true },
-  { id: 'sunspire', name: 'Sunspire', type: 'plains', position: { x: 1, y: 2 }, description: 'A tower that catches the first light of dawn.', defenseStrength: 12, strategicValue: 10, resources: ['Light', 'Knowledge'], lore: 'Scholars and mages study here, using the pure sunlight to power their research.', isClaimable: true },
-  { id: 'emerald_grove', name: 'Emerald Grove', type: 'forest', position: { x: 4, y: 2 }, description: 'A sacred grove where nature magic is strongest.', defenseStrength: 8, strategicValue: 12, resources: ['Magic', 'Gems'], lore: 'The heart of druidic power, where ancient rituals maintain the balance of nature.', isClaimable: true },
-  { id: 'stormwatch', name: 'Stormwatch', type: 'mountain', position: { x: 6, y: 2 }, description: 'A watchtower that monitors weather patterns.', defenseStrength: 14, strategicValue: 8, resources: ['Weather', 'Stone'], lore: 'Storm mages built this tower to predict and control the weather across the realm.', isClaimable: true },
-  
+  { id: 'forest_3', name: 'Thornwall Thicket', type: 'forest', position: { x: 0, y: 1 }, isClaimable: true, description: 'Defensive forest barrier', lore: 'Thorns that grow to protect the realm', strategicValue: 10, defenseStrength: 15, resources: ['Thornwood', 'Berries'] },
+  { id: 'castle_2', name: 'Goldenhall', type: 'castle', position: { x: 1, y: 1 }, isClaimable: true, description: 'Wealthy trading post', lore: 'Where merchants from all lands gather', strategicValue: 13, defenseStrength: 20, resources: ['Gold', 'Silk'] },
+  { id: 'water_4', name: 'Crystal Lake', type: 'water', position: { x: 2, y: 1 }, isClaimable: false, description: 'Pure mountain lake', lore: 'Waters so clear they reflect the soul', strategicValue: 8, defenseStrength: 0, resources: ['Crystal', 'Pure Water'] },
+  { id: 'mountain_2', name: 'Dragonspine Ridge', type: 'mountain', position: { x: 3, y: 1 }, isClaimable: true, description: 'Dragon-haunted peaks', lore: 'Where the last dragon made its lair', strategicValue: 14, defenseStrength: 22, resources: ['Dragon Scales', 'Mithril'] },
+  { id: 'forest_4', name: 'Shadowmere', type: 'forest', position: { x: 4, y: 1 }, isClaimable: true, description: 'Dark mysterious woods', lore: 'Forest where shadows have their own will', strategicValue: 11, defenseStrength: 16, resources: ['Shadow Moss', 'Dark Berries'] },
+  { id: 'castle_3', name: 'Brightspear Citadel', type: 'castle', position: { x: 5, y: 1 }, isClaimable: true, description: 'Shining fortress of light', lore: 'Blessed by the gods of light and justice', strategicValue: 16, defenseStrength: 28, resources: ['Blessed Steel', 'Holy Water'] },
+  { id: 'desert_2', name: 'Mirage Valley', type: 'desert', position: { x: 6, y: 1 }, isClaimable: true, description: 'Valley of illusions', lore: 'Where reality bends and mirages come alive', strategicValue: 9, defenseStrength: 12, resources: ['Mirage Crystals', 'Desert Flowers'] },
+  { id: 'mountain_3', name: 'Skyreach Peak', type: 'mountain', position: { x: 7, y: 1 }, isClaimable: true, description: 'Highest mountain peak', lore: 'So tall it touches the realm of the gods', strategicValue: 13, defenseStrength: 20, resources: ['Sky Metal', 'Wind Crystals'] },
+
   // Row 3
-  { id: 'silverstream', name: 'Silverstream', type: 'water', position: { x: 0, y: 3 }, description: 'A river that flows with silver-tinted water.', defenseStrength: 0, strategicValue: 9, resources: ['Silver', 'Water'], lore: 'The silver comes from upstream mines, making this river valuable for both trade and magic.', isClaimable: false },
-  { id: 'thornwall', name: 'Thornwall', type: 'forest', position: { x: 2, y: 3 }, description: 'A dense forest of thorny trees that forms a natural barrier.', defenseStrength: 16, strategicValue: 7, resources: ['Defense', 'Thorns'], lore: 'These thorns are said to be cursed, growing to protect ancient secrets within.', isClaimable: true },
-  { id: 'royal_spire', name: 'Royal Spire', type: 'plains', position: { x: 3, y: 3 }, description: 'The ultimate seat of power in the kingdom.', defenseStrength: 25, strategicValue: 15, resources: ['Power', 'Authority'], lore: 'Only when all territories bow to one guild does this spire emerge from the earth, awaiting its true ruler.', isClaimable: false, isRoyalSpire: true },
-  { id: 'moonwell', name: 'Moonwell', type: 'plains', position: { x: 5, y: 3 }, description: 'A mystical well that glows under moonlight.', defenseStrength: 6, strategicValue: 11, resources: ['Moon Magic', 'Water'], lore: 'The well draws power from lunar cycles, strongest during the full moon.', isClaimable: true },
-  { id: 'dragonrest', name: 'Dragonrest', type: 'mountain', position: { x: 7, y: 3 }, description: 'Ancient dragon lairs carved into the mountainside.', defenseStrength: 20, strategicValue: 14, resources: ['Dragon Bones', 'Treasure'], lore: 'Though the great dragons are gone, their power still lingers in these caves.', isClaimable: true },
-  
+  { id: 'desert_3', name: 'Oasis of Whispers', type: 'desert', position: { x: 0, y: 2 }, isClaimable: true, description: 'Life-giving oasis', lore: 'Where desert spirits share ancient secrets', strategicValue: 12, defenseStrength: 10, resources: ['Life Water', 'Date Palms'] },
+  { id: 'water_5', name: 'Serpent River', type: 'water', position: { x: 1, y: 2 }, isClaimable: false, description: 'Winding river passage', lore: 'Named for its serpentine path through the land', strategicValue: 7, defenseStrength: 0, resources: ['River Fish', 'Reed'] },
+  { id: 'forest_5', name: 'Eldergrove', type: 'forest', position: { x: 2, y: 2 }, isClaimable: true, description: 'Ancient tree sanctuary', lore: 'Home to the oldest trees in the realm', strategicValue: 15, defenseStrength: 18, resources: ['Elder Wood', 'Ancient Sap'] },
+  { id: 'royal_spire', name: 'The Royal Spire', type: 'castle', position: { x: 3, y: 2 }, isClaimable: false, isRoyalSpire: true, description: 'The ultimate seat of power', lore: 'A mystical spire that appears only when one guild controls all territories. From here, the true rulers of the realm can grant royal titles and command the kingdom.', strategicValue: 25, defenseStrength: 50, resources: ['Royal Essence', 'Crown Jewels'] },
+  { id: 'castle_4', name: 'Moonrise Tower', type: 'castle', position: { x: 4, y: 2 }, isClaimable: true, description: 'Lunar observatory fortress', lore: 'Where mages study the movements of the moons', strategicValue: 14, defenseStrength: 24, resources: ['Moonstone', 'Star Charts'] },
+  { id: 'water_6', name: 'Twilight Marsh', type: 'water', position: { x: 5, y: 2 }, isClaimable: false, description: 'Mystical wetlands', lore: 'Where day and night meet in eternal twilight', strategicValue: 9, defenseStrength: 0, resources: ['Marsh Gas', 'Twilight Flowers'] },
+  { id: 'forest_6', name: 'Ironbark Forest', type: 'forest', position: { x: 6, y: 2 }, isClaimable: true, description: 'Forest of metal trees', lore: 'Trees with bark as hard as iron', strategicValue: 11, defenseStrength: 19, resources: ['Iron Bark', 'Metal Sap'] },
+  { id: 'mountain_4', name: 'Frostcrown', type: 'mountain', position: { x: 7, y: 2 }, isClaimable: true, description: 'Eternal winter peak', lore: 'Mountain crowned with eternal ice and snow', strategicValue: 12, defenseStrength: 21, resources: ['Eternal Ice', 'Frost Gems'] },
+
   // Row 4
-  { id: 'mistwood', name: 'Mistwood', type: 'forest', position: { x: 1, y: 4 }, description: 'A forest perpetually shrouded in magical mist.', defenseStrength: 11, strategicValue: 8, resources: ['Illusion', 'Herbs'], lore: 'The mist here plays tricks on travelers, leading them in circles or to hidden treasures.', isClaimable: true },
-  { id: 'goldenpeak', name: 'Goldenpeak', type: 'mountain', position: { x: 4, y: 4 }, description: 'A mountain rich in precious metals and gems.', defenseStrength: 13, strategicValue: 13, resources: ['Gold', 'Gems'], lore: 'Miners work day and night to extract the wealth hidden in these peaks.', isClaimable: true },
-  { id: 'starfall_desert', name: 'Starfall Desert', type: 'desert', position: { x: 6, y: 4 }, description: 'A desert where meteors frequently fall from the sky.', defenseStrength: 7, strategicValue: 10, resources: ['Star Metal', 'Sand'], lore: 'The meteors bring rare materials from the heavens, prized by smiths and mages alike.', isClaimable: true },
-  
+  { id: 'castle_5', name: 'Shadowgate Keep', type: 'castle', position: { x: 0, y: 3 }, isClaimable: true, description: 'Fortress of shadows', lore: 'Gateway between the realm of light and shadow', strategicValue: 17, defenseStrength: 26, resources: ['Shadow Steel', 'Void Crystals'] },
+  { id: 'mountain_5', name: 'Thunderpeak', type: 'mountain', position: { x: 1, y: 3 }, isClaimable: true, description: 'Storm-wreathed mountain', lore: 'Where lightning never ceases to strike', strategicValue: 13, defenseStrength: 17, resources: ['Thunder Stone', 'Lightning Crystals'] },
+  { id: 'desert_4', name: 'Bone Desert', type: 'desert', position: { x: 2, y: 3 }, isClaimable: true, description: 'Desert of ancient battles', lore: 'Where the bones of ancient warriors rest', strategicValue: 8, defenseStrength: 9, resources: ['Ancient Bones', 'Battle Relics'] },
+  { id: 'water_7', name: 'Bloodmere', type: 'water', position: { x: 3, y: 3 }, isClaimable: false, description: 'Crimson-tinted lake', lore: 'Lake that runs red from iron deposits', strategicValue: 6, defenseStrength: 0, resources: ['Iron Ore', 'Red Algae'] },
+  { id: 'forest_7', name: 'Singing Pines', type: 'forest', position: { x: 4, y: 3 }, isClaimable: true, description: 'Musical forest', lore: 'Pine trees that sing in the wind', strategicValue: 10, defenseStrength: 13, resources: ['Singing Wood', 'Pine Resin'] },
+  { id: 'castle_6', name: 'Starfall Bastion', type: 'castle', position: { x: 5, y: 3 }, isClaimable: true, description: 'Celestial fortress', lore: 'Built where a star fell from the heavens', strategicValue: 18, defenseStrength: 30, resources: ['Star Metal', 'Celestial Gems'] },
+  { id: 'mountain_6', name: 'Grimhold', type: 'mountain', position: { x: 6, y: 3 }, isClaimable: true, description: 'Forbidding mountain fortress', lore: 'Dark mountain that few dare to climb', strategicValue: 11, defenseStrength: 19, resources: ['Dark Stone', 'Shadow Crystals'] },
+  { id: 'water_8', name: 'Mistral Bay', type: 'water', position: { x: 7, y: 3 }, isClaimable: false, description: 'Wind-swept bay', lore: 'Where the winds of the world converge', strategicValue: 7, defenseStrength: 0, resources: ['Wind Pearls', 'Storm Glass'] },
+
   // Row 5
-  { id: 'deepwater', name: 'Deepwater', type: 'water', position: { x: 0, y: 5 }, description: 'The deepest part of the great lake.', defenseStrength: 0, strategicValue: 7, resources: ['Deep Fish', 'Pearls'], lore: 'Ancient creatures dwell in these depths, guardians of underwater treasures.', isClaimable: false },
-  { id: 'brightmeadow', name: 'Brightmeadow', type: 'plains', position: { x: 2, y: 5 }, description: 'Sunlit plains where flowers bloom year-round.', defenseStrength: 4, strategicValue: 9, resources: ['Flowers', 'Honey'], lore: 'The eternal spring here is maintained by nature spirits who dance in the meadows.', isClaimable: true },
-  { id: 'shadowpine', name: 'Shadowpine', type: 'forest', position: { x: 5, y: 5 }, description: 'Dark pine forest where shadows seem to move on their own.', defenseStrength: 12, strategicValue: 6, resources: ['Dark Wood', 'Shadows'], lore: 'Shadow creatures are said to inhabit these woods, neither good nor evil, but mysterious.', isClaimable: true },
-  { id: 'sandstone_cliffs', name: 'Sandstone Cliffs', type: 'desert', position: { x: 7, y: 5 }, description: 'Towering cliffs of red sandstone overlooking the desert.', defenseStrength: 15, strategicValue: 8, resources: ['Stone', 'Vantage'], lore: 'These cliffs provide an excellent view of the entire southern region.', isClaimable: true },
-  
+  { id: 'forest_8', name: 'Goldleaf Glade', type: 'forest', position: { x: 0, y: 4 }, isClaimable: true, description: 'Golden autumn forest', lore: 'Forest locked in eternal autumn', strategicValue: 9, defenseStrength: 11, resources: ['Golden Leaves', 'Amber'] },
+  { id: 'water_9', name: 'Moonwell', type: 'water', position: { x: 1, y: 4 }, isClaimable: false, description: 'Sacred moonlit pool', lore: 'Pool that reflects only moonlight', strategicValue: 10, defenseStrength: 0, resources: ['Moon Water', 'Silver Fish'] },
+  { id: 'castle_7', name: 'Dawnbreak Fortress', type: 'castle', position: { x: 2, y: 4 }, isClaimable: true, description: 'Fortress of the rising sun', lore: 'Where the first light of dawn always shines', strategicValue: 15, defenseStrength: 23, resources: ['Dawn Crystal', 'Solar Steel'] },
+  { id: 'mountain_7', name: 'Voidpeak', type: 'mountain', position: { x: 3, y: 4 }, isClaimable: true, description: 'Mountain touching the void', lore: 'Peak that reaches into the space between worlds', strategicValue: 16, defenseStrength: 25, resources: ['Void Stone', 'Null Crystals'] },
+  { id: 'desert_5', name: 'Crystal Sands', type: 'desert', position: { x: 4, y: 4 }, isClaimable: true, description: 'Desert of crystal formations', lore: 'Where sand has turned to living crystal', strategicValue: 13, defenseStrength: 14, resources: ['Living Crystal', 'Prism Shards'] },
+  { id: 'forest_9', name: 'Wraithwood', type: 'forest', position: { x: 5, y: 4 }, isClaimable: true, description: 'Haunted forest', lore: 'Forest where spirits of the past linger', strategicValue: 8, defenseStrength: 12, resources: ['Spirit Wood', 'Ectoplasm'] },
+  { id: 'water_10', name: 'Siren Cove', type: 'water', position: { x: 6, y: 4 }, isClaimable: false, description: 'Enchanted coastal waters', lore: 'Where sirens once sang to sailors', strategicValue: 8, defenseStrength: 0, resources: ['Siren Scales', 'Echo Shells'] },
+  { id: 'castle_8', name: 'Nightfall Citadel', type: 'castle', position: { x: 7, y: 4 }, isClaimable: true, description: 'Fortress of eternal night', lore: 'Castle where night never ends', strategicValue: 14, defenseStrength: 22, resources: ['Night Steel', 'Dark Crystals'] },
+
   // Row 6
-  { id: 'willowbend', name: 'Willowbend', type: 'plains', position: { x: 1, y: 6 }, description: 'Peaceful plains dotted with weeping willows.', defenseStrength: 3, strategicValue: 7, resources: ['Peace', 'Willow'], lore: 'A place of healing and rest, where wounded warriors come to recover.', isClaimable: true },
-  { id: 'crystalcave', name: 'Crystalcave', type: 'mountain', position: { x: 3, y: 6 }, description: 'Caves filled with magical crystals that amplify spells.', defenseStrength: 9, strategicValue: 12, resources: ['Crystals', 'Magic'], lore: 'Mages journey here to charge their artifacts and learn new spells.', isClaimable: true },
-  { id: 'oasis_springs', name: 'Oasis Springs', type: 'desert', position: { x: 5, y: 6 }, description: 'Life-giving springs in the heart of the desert.', defenseStrength: 6, strategicValue: 11, resources: ['Water', 'Life'], lore: 'These springs never run dry, sustained by deep underground rivers.', isClaimable: true },
-  
+  { id: 'mountain_8', name: 'Flameheart', type: 'mountain', position: { x: 0, y: 5 }, isClaimable: true, description: 'Volcanic mountain', lore: 'Mountain with a heart of living flame', strategicValue: 14, defenseStrength: 20, resources: ['Flame Crystals', 'Volcanic Glass'] },
+  { id: 'desert_6', name: 'Shifting Sands', type: 'desert', position: { x: 1, y: 5 }, isClaimable: true, description: 'Ever-changing desert', lore: 'Desert that reshapes itself with the wind', strategicValue: 7, defenseStrength: 8, resources: ['Shifting Sand', 'Wind Stones'] },
+  { id: 'water_11', name: 'Deepcurrent', type: 'water', position: { x: 2, y: 5 }, isClaimable: false, description: 'Deep underground river', lore: 'River that flows through the depths of the earth', strategicValue: 9, defenseStrength: 0, resources: ['Deep Pearls', 'Cave Fish'] },
+  { id: 'forest_10', name: 'Dreamwood', type: 'forest', position: { x: 3, y: 5 }, isClaimable: true, description: 'Forest of sleeping trees', lore: 'Where trees dream and dreams become real', strategicValue: 12, defenseStrength: 15, resources: ['Dream Essence', 'Sleep Moss'] },
+  { id: 'castle_9', name: 'Skybridge Keep', type: 'castle', position: { x: 4, y: 5 }, isClaimable: true, description: 'Fortress in the clouds', lore: 'Castle connected to the sky by bridges of light', strategicValue: 19, defenseStrength: 32, resources: ['Cloud Steel', 'Sky Crystals'] },
+  { id: 'mountain_9', name: 'Earthshaker', type: 'mountain', position: { x: 5, y: 5 }, isClaimable: true, description: 'Trembling mountain', lore: 'Mountain that shakes the very foundations of the world', strategicValue: 15, defenseStrength: 24, resources: ['Earthquake Stone', 'Tremor Gems'] },
+  { id: 'forest_11', name: 'Spiritgrove', type: 'forest', position: { x: 6, y: 5 }, isClaimable: true, description: 'Sacred spirit forest', lore: 'Where the spirits of nature gather', strategicValue: 13, defenseStrength: 17, resources: ['Spirit Bark', 'Nature Essence'] },
+  { id: 'water_12', name: 'Tidecaller Bay', type: 'water', position: { x: 7, y: 5 }, isClaimable: false, description: 'Magically controlled tides', lore: 'Bay where mages control the very tides', strategicValue: 11, defenseStrength: 0, resources: ['Tide Crystals', 'Mage Pearls'] },
+
   // Row 7
-  { id: 'southgate', name: 'Southgate', type: 'plains', position: { x: 2, y: 7 }, description: 'The southern entrance to the kingdom.', defenseStrength: 10, strategicValue: 10, resources: ['Trade', 'Defense'], lore: 'All travelers from the south must pass through this fortified gate.', isClaimable: true },
-  { id: 'mirage_dunes', name: 'Mirage Dunes', type: 'desert', position: { x: 4, y: 7 }, description: 'Shifting sand dunes where mirages reveal hidden truths.', defenseStrength: 5, strategicValue: 9, resources: ['Illusion', 'Truth'], lore: 'The mirages here sometimes show visions of the past or future.', isClaimable: true },
-  { id: 'sunset_ridge', name: 'Sunset Ridge', type: 'mountain', position: { x: 6, y: 7 }, description: 'A ridge that offers spectacular sunset views.', defenseStrength: 11, strategicValue: 8, resources: ['Beauty', 'Stone'], lore: 'Artists and poets gather here to capture the perfect sunset in their work.', isClaimable: true }
+  { id: 'water_13', name: 'Southern Depths', type: 'water', position: { x: 0, y: 6 }, isClaimable: false, description: 'Deep southern waters', lore: 'Mysterious depths that few have explored', strategicValue: 6, defenseStrength: 0, resources: ['Deep Treasures', 'Abyssal Pearls'] },
+  { id: 'castle_10', name: 'Sunspear Tower', type: 'castle', position: { x: 1, y: 6 }, isClaimable: true, description: 'Solar-powered fortress', lore: 'Tower that harnesses the power of the sun', strategicValue: 16, defenseStrength: 27, resources: ['Solar Crystals', 'Sun Steel'] },
+  { id: 'mountain_10', name: 'Stormbreak', type: 'mountain', position: { x: 2, y: 6 }, isClaimable: true, description: 'Storm-splitting peak', lore: 'Mountain so tall it splits storms in two', strategicValue: 12, defenseStrength: 18, resources: ['Storm Crystals', 'Lightning Stone'] },
+  { id: 'desert_7', name: 'Glasslands', type: 'desert', position: { x: 3, y: 6 }, isClaimable: true, description: 'Desert of glass', lore: 'Where ancient magic turned sand to glass', strategicValue: 10, defenseStrength: 11, resources: ['Magic Glass', 'Sand Crystals'] },
+  { id: 'water_14', name: 'Whirlpool Strait', type: 'water', position: { x: 4, y: 6 }, isClaimable: false, description: 'Dangerous whirlpool', lore: 'Where the sea swallows ships whole', strategicValue: 5, defenseStrength: 0, resources: ['Whirlpool Gems', 'Sunken Treasures'] },
+  { id: 'forest_12', name: 'Thornheart', type: 'forest', position: { x: 5, y: 6 }, isClaimable: true, description: 'Forest of thorned trees', lore: 'Where every tree has a heart of thorns', strategicValue: 9, defenseStrength: 14, resources: ['Thorn Hearts', 'Barbed Wood'] },
+  { id: 'castle_11', name: 'Voidgate Fortress', type: 'castle', position: { x: 6, y: 6 }, isClaimable: true, description: 'Gateway to the void', lore: 'Fortress that guards the entrance to nothingness', strategicValue: 20, defenseStrength: 35, resources: ['Void Steel', 'Null Essence'] },
+  { id: 'mountain_11', name: 'Worldsend', type: 'mountain', position: { x: 7, y: 6 }, isClaimable: true, description: 'The final mountain', lore: 'Mountain at the very edge of the known world', strategicValue: 17, defenseStrength: 28, resources: ['Edge Stone', 'Boundary Crystals'] },
+
+  // Row 8
+  { id: 'forest_13', name: 'Mistwood', type: 'forest', position: { x: 0, y: 7 }, isClaimable: true, description: 'Perpetually misty forest', lore: 'Forest shrouded in eternal mist', strategicValue: 8, defenseStrength: 10, resources: ['Mist Essence', 'Fog Berries'] },
+  { id: 'water_15', name: 'Forgotten Lake', type: 'water', position: { x: 1, y: 7 }, isClaimable: false, description: 'Lake lost to memory', lore: 'Lake that erases itself from memory', strategicValue: 7, defenseStrength: 0, resources: ['Memory Pearls', 'Forgotten Fish'] },
+  { id: 'desert_8', name: 'Starfall Desert', type: 'desert', position: { x: 2, y: 7 }, isClaimable: true, description: 'Desert of fallen stars', lore: 'Where stars come to die', strategicValue: 11, defenseStrength: 13, resources: ['Star Dust', 'Fallen Meteors'] },
+  { id: 'castle_12', name: 'Doomspire', type: 'castle', position: { x: 3, y: 7 }, isClaimable: true, description: 'Fortress of final judgment', lore: 'Tower where fate itself is decided', strategicValue: 18, defenseStrength: 31, resources: ['Fate Steel', 'Doom Crystals'] },
+  { id: 'mountain_12', name: 'Soulforge', type: 'mountain', position: { x: 4, y: 7 }, isClaimable: true, description: 'Mountain that forges souls', lore: 'Where souls are tempered like steel', strategicValue: 16, defenseStrength: 26, resources: ['Soul Steel', 'Spirit Gems'] },
+  { id: 'water_16', name: 'Endless Ocean', type: 'water', position: { x: 5, y: 7 }, isClaimable: false, description: 'Ocean without end', lore: 'Waters that stretch beyond the horizon', strategicValue: 8, defenseStrength: 0, resources: ['Infinite Pearls', 'Horizon Fish'] },
+  { id: 'forest_14', name: 'Timeless Grove', type: 'forest', position: { x: 6, y: 7 }, isClaimable: true, description: 'Forest outside of time', lore: 'Where time has no meaning', strategicValue: 14, defenseStrength: 16, resources: ['Timeless Wood', 'Eternal Sap'] },
+  { id: 'water_17', name: 'Voidwater', type: 'water', position: { x: 7, y: 7 }, isClaimable: false, description: 'Water from the void', lore: 'Water that exists between existence', strategicValue: 9, defenseStrength: 0, resources: ['Void Water', 'Nothing Pearls'] },
 ];
 
 // Initial research data
@@ -127,1504 +227,833 @@ const initialResearch: Research[] = [
   {
     id: 'basic_combat',
     name: 'Basic Combat Techniques',
-    description: 'Learn fundamental combat maneuvers to improve your fighting skills.',
+    description: 'Learn fundamental combat skills and weapon handling',
     category: 'combat',
-    duration: 5 * 60 * 1000, // 5 minutes in milliseconds
-    requirements: { level: 1 },
-    rewards: { 
-      experience: 50,
-      statBoosts: { strength: 1 }
+    duration: 5 * 60 * 1000, // 5 minutes
+    requirements: {
+      level: 1,
+      prerequisites: []
     },
-    isCompleted: false
-  },
-  {
-    id: 'advanced_combat',
-    name: 'Advanced Combat Strategies',
-    description: 'Master complex combat tactics to gain an edge in battle.',
-    category: 'combat',
-    duration: 15 * 60 * 1000, // 15 minutes
-    requirements: { level: 5, prerequisites: ['basic_combat'] },
-    rewards: { 
-      experience: 150,
-      statBoosts: { strength: 2, dexterity: 1 }
-    },
-    isCompleted: false
+    rewards: {
+      experience: 100,
+      statBoosts: {
+        strength: 2,
+        dexterity: 1
+      }
+    }
   },
   {
     id: 'elemental_magic',
     name: 'Elemental Magic Basics',
-    description: 'Study the foundations of elemental magic to cast simple spells.',
+    description: 'Study the fundamental principles of elemental magic',
     category: 'magic',
-    duration: 10 * 60 * 1000, // 10 minutes
-    requirements: { level: 3 },
-    rewards: { 
-      experience: 100, 
-      unlocks: ['spell:magic_missile'],
-      statBoosts: { intelligence: 1 }
+    duration: 7 * 60 * 1000, // 7 minutes
+    requirements: {
+      level: 2,
+      prerequisites: []
     },
-    isCompleted: false
-  },
-  {
-    id: 'arcane_rituals',
-    name: 'Arcane Rituals',
-    description: 'Delve into ancient rituals to unlock powerful magical abilities.',
-    category: 'magic',
-    duration: 30 * 60 * 1000, // 30 minutes
-    requirements: { level: 10, prerequisites: ['elemental_magic'] },
-    rewards: { 
-      experience: 300, 
-      unlocks: ['spell:fireball'],
-      statBoosts: { intelligence: 2, wisdom: 1 }
-    },
-    isCompleted: false
+    rewards: {
+      experience: 150,
+      statBoosts: {
+        intelligence: 2,
+        wisdom: 1
+      },
+      unlocks: ['spell:fireball', 'spell:ice_shard']
+    }
   },
   {
     id: 'basic_crafting',
     name: 'Basic Crafting Skills',
-    description: 'Learn to craft simple items and equipment from raw materials.',
+    description: 'Learn essential crafting techniques and tool usage',
     category: 'crafting',
-    duration: 8 * 60 * 1000, // 8 minutes
-    requirements: { level: 2 },
-    rewards: { 
-      experience: 80, 
-      unlocks: ['item:crafting_kit'],
-      statBoosts: { dexterity: 1 }
+    duration: 6 * 60 * 1000, // 6 minutes
+    requirements: {
+      level: 1,
+      prerequisites: []
     },
-    isCompleted: false
+    rewards: {
+      experience: 120,
+      statBoosts: {
+        dexterity: 1,
+        intelligence: 1
+      },
+      unlocks: ['item:basic_sword', 'item:leather_armor']
+    }
+  },
+  {
+    id: 'advanced_combat',
+    name: 'Advanced Combat Strategies',
+    description: 'Master complex combat maneuvers and tactical thinking',
+    category: 'combat',
+    duration: 10 * 60 * 1000, // 10 minutes
+    requirements: {
+      level: 5,
+      prerequisites: ['basic_combat']
+    },
+    rewards: {
+      experience: 250,
+      statBoosts: {
+        strength: 3,
+        dexterity: 2,
+        constitution: 1
+      }
+    }
+  },
+  {
+    id: 'arcane_rituals',
+    name: 'Arcane Rituals',
+    description: 'Delve into the mysteries of complex magical rituals',
+    category: 'magic',
+    duration: 12 * 60 * 1000, // 12 minutes
+    requirements: {
+      level: 6,
+      prerequisites: ['elemental_magic']
+    },
+    rewards: {
+      experience: 300,
+      statBoosts: {
+        intelligence: 3,
+        wisdom: 2,
+        charisma: 1
+      },
+      unlocks: ['spell:teleport', 'spell:summon_familiar']
+    }
   },
   {
     id: 'advanced_crafting',
     name: 'Advanced Crafting Techniques',
-    description: 'Master the art of crafting to create superior gear and artifacts.',
+    description: 'Master the art of creating legendary items',
     category: 'crafting',
-    duration: 20 * 60 * 1000, // 20 minutes
-    requirements: { level: 7, prerequisites: ['basic_crafting'] },
-    rewards: { 
-      experience: 200, 
-      unlocks: ['item:artisan_tools'],
-      statBoosts: { dexterity: 2, intelligence: 1 }
+    duration: 15 * 60 * 1000, // 15 minutes
+    requirements: {
+      level: 8,
+      prerequisites: ['basic_crafting']
     },
-    isCompleted: false
+    rewards: {
+      experience: 400,
+      statBoosts: {
+        dexterity: 3,
+        intelligence: 2,
+        wisdom: 1
+      },
+      unlocks: ['item:enchanted_blade', 'item:mage_robes']
+    }
   },
   {
     id: 'defensive_tactics',
     name: 'Defensive Tactics',
-    description: 'Learn techniques to improve your defensive capabilities in combat.',
+    description: 'Learn advanced defensive strategies and shield techniques',
     category: 'combat',
-    duration: 12 * 60 * 1000, // 12 minutes
-    requirements: { level: 4, prerequisites: ['basic_combat'] },
-    rewards: { 
-      experience: 120,
-      statBoosts: { constitution: 2 }
+    duration: 8 * 60 * 1000, // 8 minutes
+    requirements: {
+      level: 4,
+      prerequisites: ['basic_combat']
     },
-    isCompleted: false
+    rewards: {
+      experience: 200,
+      statBoosts: {
+        constitution: 3,
+        wisdom: 1
+      }
+    }
   },
   {
     id: 'healing_arts',
     name: 'Healing Arts',
-    description: 'Study the fundamentals of magical healing and first aid.',
+    description: 'Study the sacred arts of healing and restoration',
     category: 'magic',
-    duration: 18 * 60 * 1000, // 18 minutes
-    requirements: { level: 6, prerequisites: ['elemental_magic'] },
-    rewards: { 
-      experience: 180, 
-      unlocks: ['spell:heal'],
-      statBoosts: { wisdom: 2 }
+    duration: 9 * 60 * 1000, // 9 minutes
+    requirements: {
+      level: 3,
+      prerequisites: []
     },
-    isCompleted: false
+    rewards: {
+      experience: 180,
+      statBoosts: {
+        wisdom: 2,
+        charisma: 1
+      },
+      unlocks: ['spell:heal', 'spell:cure_poison']
+    }
   }
 ];
-
-// Helper function to calculate base stats
-const getBaseStats = (character: Character) => {
-  const race = races.find(r => r.id === character.race);
-  const characterClass = classes.find(c => c.id === character.class);
-  
-  const baseStats = {
-    strength: 10,
-    dexterity: 10,
-    constitution: 10,
-    intelligence: 10,
-    wisdom: 10,
-    charisma: 10
-  };
-  
-  // Apply race bonuses
-  if (race?.statBonuses) {
-    Object.entries(race.statBonuses).forEach(([stat, bonus]) => {
-      if (stat in baseStats && typeof bonus === 'number' && bonus !== null && bonus !== undefined) {
-        baseStats[stat as keyof typeof baseStats] += bonus;
-      }
-    });
-  }
-  
-  // Apply class bonuses if they exist
-  if (characterClass?.statBonuses) {
-    Object.entries(characterClass.statBonuses).forEach(([stat, bonus]) => {
-      if (stat in baseStats && typeof bonus === 'number' && bonus !== null && bonus !== undefined) {
-        baseStats[stat as keyof typeof baseStats] += bonus;
-      }
-    });
-  }
-  
-  // Apply level bonuses (2 points per level)
-  const levelBonus = (character.level - 1) * 2;
-  baseStats.strength += Math.floor(levelBonus / 6);
-  baseStats.dexterity += Math.floor(levelBonus / 6);
-  baseStats.constitution += Math.floor(levelBonus / 6);
-  baseStats.intelligence += Math.floor(levelBonus / 6);
-  baseStats.wisdom += Math.floor(levelBonus / 6);
-  baseStats.charisma += Math.floor(levelBonus / 6);
-  
-  return baseStats;
-};
-
-// Helper function to calculate total stats
-const calculateTotalStats = (baseStats: any, equipment: any) => {
-  const totalStats = { ...baseStats };
-  
-  // Add equipment bonuses
-  Object.values(equipment).forEach((item: any) => {
-    if (item?.stats) {
-      Object.entries(item.stats).forEach(([stat, value]) => {
-        if (value && stat in totalStats) {
-          totalStats[stat as keyof typeof totalStats] += value;
-        }
-      });
-    }
-    if (item?.boost) {
-      Object.entries(item.boost).forEach(([stat, value]) => {
-        if (value && stat in totalStats) {
-          totalStats[stat as keyof typeof totalStats] += value;
-        }
-      });
-    }
-  });
-  
-  return totalStats;
-};
 
 export const useGameStore = create<GameState>()(
   persist(
     (set, get) => ({
-      // Authentication
+      // Initial state
       isAuthenticated: false,
-      username: '',
-      
-      // Character Management
+      userRole: 'player',
       characters: [],
       activeCharacter: null,
-      userRole: 'player',
+      diamonds: 50,
       
-      // Currency
-      diamonds: 100, // Starting diamonds
+      // Chat system
+      activeChannel: 'kingdom_chat',
+      chatLobbies: [
+        {
+          id: 'kingdom_chat',
+          name: 'Kingdom Chat',
+          description: 'Main chat for all players in the kingdom',
+          isPrivate: false,
+          members: [],
+          messages: [],
+          createdAt: Date.now()
+        }
+      ],
+      chatPopout: false,
+      onlineUsers: [],
       
-      // Social
+      // Social features
       guilds: [],
       activeParty: null,
       friendsList: [],
       onlineFriends: [],
       
-      // Territory System (not persisted)
+      // Kingdom system
       territories: initialTerritories,
-      royalSpireUnlocked: false,
-      
-      // Guild Battles
       guildBattles: [],
       activeGuildBattle: null,
+      royalSpireUnlocked: false,
       
-      // Mail System
-      mailbox: [],
-      
-      // Research System
-      researchItems: initialResearch,
+      // Research system
       activeResearch: [],
       completedResearch: [],
       
-      // Chat State (not persisted)
-      activeChannel: 'general',
-      chatLobbies: [
-        {
-          id: 'general',
-          name: 'General',
-          description: 'Kingdom Chat',
-          type: 'default',
-          createdAt: Date.now(),
-          members: [],
-          messages: [],
-          isPrivate: false
-        },
-        {
-          id: 'help',
-          name: 'Help',
-          description: 'Get help from other players',
-          type: 'default',
-          createdAt: Date.now(),
-          members: [],
-          messages: [],
-          isPrivate: false
-        },
-        {
-          id: 'trading',
-          name: 'Trading',
-          description: 'Buy and sell items with other players',
-          type: 'default',
-          createdAt: Date.now(),
-          members: [],
-          messages: [],
-          isPrivate: false
-        },
-        {
-          id: 'guild-recruitment',
-          name: 'Guild Recruitment',
-          description: 'Find or advertise guilds',
-          type: 'default',
-          createdAt: Date.now(),
-          members: [],
-          messages: [],
-          isPrivate: false
-        }
-      ],
-      chatPopout: false,
-      
-      // Online Users (not persisted)
-      onlineUsers: [],
-      
-      // Shop State (not persisted)
-      shopItems: shopItems.map((item: ShopItem) => ({ ...item, stock: item.stock || 10 })),
-      availableEnemies: [],
-      
-      // Combat State (not persisted)
-      selectedOpponent: null,
-      
-      // PVP State
-      pvpQueue: [],
-      activePvpMatch: null,
-      pvpRanking: 1000,
-      
-      // Admin State
-      bannedUsers: [],
-      customEnemies: [],
-      
-      // Notification system (not persisted)
+      // Notifications
       notifications: [],
       
-      // Authentication Functions
-      login: (username: string) => {
-        const { characters } = get();
-        
-        // Check for admin account
-        if (username.toLowerCase() === 'admin') {
-          set({
+      // Authentication actions
+      login: (username: string, password: string) => {
+        // Simple mock authentication
+        if (username && password) {
+          set({ 
             isAuthenticated: true,
-            username: 'admin',
-            userRole: 'admin'
+            userRole: username === 'admin' ? 'admin' : 'player'
           });
-        } else {
-          set({
-            isAuthenticated: true,
-            username,
-            userRole: 'player'
-          });
-        }
-        
-        // Auto-select first character if available and no active character
-        if (characters.length > 0 && !get().activeCharacter) {
-          const firstCharacter = characters[0];
-          // Ensure all character properties exist when selecting
-          const updatedCharacter = {
-            ...firstCharacter,
-            inventory: firstCharacter.inventory || [],
-            equipment: firstCharacter.equipment || {},
-            buffs: firstCharacter.buffs || [],
-            debuffs: firstCharacter.debuffs || [],
-            unlockedSpells: firstCharacter.unlockedSpells || [],
-            unlockedItems: firstCharacter.unlockedItems || [],
-            // Ensure combat properties exist
-            currentHealth: firstCharacter.currentHealth || firstCharacter.health?.current || firstCharacter.maxHealth || 50,
-            maxHealth: firstCharacter.maxHealth || firstCharacter.health?.max || 50,
-            armorClass: firstCharacter.armorClass || 10,
-            damageDie: firstCharacter.damageDie || 4
-          };
           
-          set({ activeCharacter: updatedCharacter });
+          // Add welcome notification only once
+          const state = get();
+          const hasWelcomeNotification = state.notifications.some(n => 
+            n.message.includes('Welcome back') && 
+            Date.now() - n.timestamp < 5000 // Within last 5 seconds
+          );
           
-          // Auto-join guild chat if character is in a guild
-          if (firstCharacter.guildId) {
-            get().autoJoinGuildChat(firstCharacter.guildId);
+          if (!hasWelcomeNotification) {
+            get().addNotification(`Welcome back, ${username}!`, 'success');
           }
           
-          // Only show one welcome notification during login
-          get().addNotification(`Welcome back, ${firstCharacter.name}!`, 'success');
-        } else if (characters.length === 0) {
-          get().addNotification('Welcome! Create your first character to begin your adventure.', 'info');
+          return true;
         }
+        return false;
       },
       
-      // Character Functions
-      createCharacter: (characterInput: CreateCharacterInput) => {
-        const { characters, isAuthenticated } = get();
-        
-        // Check authentication first
-        if (!isAuthenticated) {
-          get().addNotification('Please log in to create a character', 'error');
-          return;
+      logout: () => {
+        set({ 
+          isAuthenticated: false, 
+          activeCharacter: null,
+          userRole: 'player'
+        });
+      },
+      
+      register: (username: string, email: string, password: string) => {
+        // Simple mock registration
+        if (username && email && password) {
+          set({ 
+            isAuthenticated: true,
+            userRole: 'player'
+          });
+          get().addNotification(`Welcome to Echoes of Elders, ${username}!`, 'success');
+          return true;
         }
-        
-        // Check if user already has 3 characters
-        if (characters.length >= 3) {
-          get().addNotification('Maximum of 3 characters allowed. Delete a character first.', 'error');
-          return;
-        }
-        
-        const race = races.find(r => r.id === characterInput.race);
-        let characterClass = classes.find(c => c.id === characterInput.class);
-        
-        if (!race) {
-          console.error("Invalid race selected");
-          return;
-        }
-        
-        // Handle custom class
-        if (characterInput.class === 'custom' && characterInput.customClass) {
-          characterClass = {
-            id: 'custom',
-            name: characterInput.customClass.name,
-            description: characterInput.customClass.description,
-            primaryStat: characterInput.customClass.primaryStat,
-            abilities: characterInput.customClass.abilities,
-            startingEquipment: characterInput.customClass.startingEquipment,
-            lore: characterInput.customClass.lore,
-            isCustom: true
-          };
-        }
-        
-        if (!characterClass) {
-          console.error("Invalid class selected");
-          return;
-        }
-        
-        // Calculate base stats from race bonuses
-        const raceStatBonuses = characterInput.race === 'custom' && characterInput.customRace 
-          ? characterInput.customRace.statBonuses 
-          : race.statBonuses;
-        
-        const baseStats = {
-          strength: 10 + (raceStatBonuses.strength || 0),
-          dexterity: 10 + (raceStatBonuses.dexterity || 0),
-          constitution: 10 + (raceStatBonuses.constitution || 0),
-          intelligence: 10 + (raceStatBonuses.intelligence || 0),
-          wisdom: 10 + (raceStatBonuses.wisdom || 0),
-          charisma: 10 + (raceStatBonuses.charisma || 0)
-        };
-        
-        // Calculate health and mana based on constitution and intelligence
-        const healthMax = 50 + (baseStats.constitution * 5);
-        const manaMax = 30 + (baseStats.intelligence * 3);
-        
-        // Calculate combat properties
-        const armorClass = 10 + Math.floor((baseStats.dexterity - 10) / 2); // Base AC + DEX modifier
-        const damageDie = 4; // Starting with d4 for new characters
-        
-        // Create starting inventory with basic items
-        const startingInventory: Item[] = [
-          {
-            id: `starter_sword_${Date.now()}`,
-            name: 'Rusty Sword',
-            description: 'A worn but functional blade for beginners.',
-            type: 'weapon',
-            rarity: 'common',
-            value: 25,
-            equipSlot: 'mainHand',
-            stats: {
-              attack: 3,
-              strength: 1
-            }
-          },
-          {
-            id: `starter_armor_${Date.now()}`,
-            name: 'Cloth Tunic',
-            description: 'Simple cloth protection for new adventurers.',
-            type: 'armor',
-            rarity: 'common',
-            value: 15,
-            equipSlot: 'chest',
-            stats: {
-              defense: 1
-            }
-          },
-          {
-            id: `health_potion_${Date.now()}_1`,
-            name: 'Health Potion',
-            description: 'A red liquid that restores health when consumed.',
-            type: 'potion',
-            rarity: 'common',
-            value: 25,
-            effects: [
-              { type: 'heal', value: 25 }
-            ],
-            stackable: true,
-            quantity: 1
-          },
-          {
-            id: `health_potion_${Date.now()}_2`,
-            name: 'Health Potion',
-            description: 'A red liquid that restores health when consumed.',
-            type: 'potion',
-            rarity: 'common',
-            value: 25,
-            effects: [
-              { type: 'heal', value: 25 }
-            ],
-            stackable: true,
-            quantity: 1
-          },
-          {
-            id: `revive_potion_${Date.now()}`,
-            name: 'Phoenix Feather Potion',
-            description: 'A mystical potion that can revive a fainted character.',
-            type: 'potion',
-            rarity: 'rare',
-            value: 100,
-            effects: [
-              { type: 'revive', value: Math.floor(healthMax * 0.25) }
-            ],
-            stackable: true,
-            quantity: 1
-          }
-        ];
-
+        return false;
+      },
+      
+      // Character management
+      createCharacter: (character) => {
         const newCharacter: Character = {
+          ...character,
           id: Date.now().toString(),
-          name: characterInput.name,
-          race: characterInput.race,
-          class: characterInput.class,
-          profileImage: characterInput.profileImage,
+          createdAt: Date.now(),
           level: 1,
           experience: 0,
           experienceToNextLevel: 100,
-          health: {
-            current: healthMax,
-            max: healthMax
+          gold: 100,
+          health: { current: 100, max: 100 },
+          mana: { current: 50, max: 50 },
+          stats: {
+            strength: 10,
+            dexterity: 10,
+            constitution: 10,
+            intelligence: 10,
+            wisdom: 10,
+            charisma: 10,
+            ...character.stats
           },
-          mana: {
-            current: manaMax,
-            max: manaMax
-          },
-          stats: baseStats,
-          inventory: startingInventory,
+          inventory: [...initialItems],
           equipment: {},
-          gold: 50, // Starting gold
           buffs: [],
-          debuffs: [],
-          customClass: characterInput.customClass,
-          customRace: characterInput.customRace,
-          unlockedSpells: [],
-          unlockedItems: [],
-          // Combat properties
-          currentHealth: healthMax,
-          maxHealth: healthMax,
-          armorClass: armorClass,
-          damageDie: damageDie
+          debuffs: []
         };
         
-        set((state: GameState) => {
-          const updatedCharacters = [...state.characters, newCharacter];
-          // Check if this is the first character to send welcome letter and gold
-          if (state.characters.length === 0) {
-            const welcomeMail: Mail = {
-              id: Date.now().toString(),
-              sender: "Generous Lord",
-              recipient: newCharacter.name,
-              subject: "Welcome to the Realm",
-              message: "Greetings, brave soul. Welcome to this realm of adventure and danger. As a token of my generosity, I bestow upon you 500 gold to aid in your journey. But beware, not everything comes without cost. A time may come when a debt is owed. Tread carefully.\n\n- A Generous Lord",
-              timestamp: Date.now(),
-              isRead: false,
-              isStarred: false
-            };
-            return {
-              characters: updatedCharacters,
-              activeCharacter: newCharacter,
-              isAuthenticated: true,
-              mailbox: [...state.mailbox, welcomeMail],
-              diamonds: state.diamonds // unchanged
-            };
-          }
-          return {
-            characters: updatedCharacters,
-            activeCharacter: newCharacter,
-            isAuthenticated: true
-          };
-        });
-        
-        // Add 500 gold if first character
-        const currentState = get();
-        if (currentState.characters.filter(c => c.id !== newCharacter.id).length === 0) {
-          set((state: GameState) => ({
-            characters: state.characters.map((c: Character) =>
-              c.id === newCharacter.id ? { ...c, gold: c.gold + 500 } : c
-            ),
-            activeCharacter: state.activeCharacter?.id === newCharacter.id 
-              ? { ...state.activeCharacter, gold: state.activeCharacter.gold + 500 }
-              : state.activeCharacter
-          }));
-        }
-        
-        // Only show notification once
-        get().addNotification(`Character ${newCharacter.name} created successfully!`, 'success');
-      },
-      
-      deleteCharacter: (characterId: string) => {
-        const { characters, activeCharacter, isAuthenticated } = get();
-        
-        if (!isAuthenticated) {
-          get().addNotification('Please log in to delete characters', 'error');
-          return;
-        }
-        
-        const characterToDelete = characters.find(c => c.id === characterId);
-        
-        if (!characterToDelete) {
-          get().addNotification('Character not found!', 'error');
-          return;
-        }
-        
-        // Remove character from the list
-        const updatedCharacters = characters.filter(c => c.id !== characterId);
-        
-        // If the deleted character was active, set a new active character or null
-        let newActiveCharacter = activeCharacter;
-        if (activeCharacter?.id === characterId) {
-          newActiveCharacter = updatedCharacters.length > 0 ? updatedCharacters[0] : null;
-        }
-        
-        set((state: GameState) => ({
-          characters: updatedCharacters,
-          activeCharacter: newActiveCharacter
+        set(state => ({
+          characters: [...state.characters, newCharacter],
+          activeCharacter: newCharacter
         }));
-        
-        get().addNotification(`Character ${characterToDelete.name} deleted successfully!`, 'success');
       },
       
-      selectCharacter: (characterId: string) => {
-        const { isAuthenticated } = get();
-        
-        if (!isAuthenticated) {
-          get().addNotification('Please log in to select a character', 'error');
-          return;
-        }
-        
-        const character = get().characters.find((c: Character) => c.id === characterId);
+      setActiveCharacter: (characterId: string) => {
+        const character = get().characters.find(c => c.id === characterId);
         if (character) {
-          // Ensure all character properties exist when selecting
-          const updatedCharacter = {
-            ...character,
-            inventory: character.inventory || [],
-            equipment: character.equipment || {},
-            buffs: character.buffs || [],
-            debuffs: character.debuffs || [],
-            unlockedSpells: character.unlockedSpells || [],
-            unlockedItems: character.unlockedItems || [],
-            // Ensure combat properties exist
-            currentHealth: character.currentHealth || character.health?.current || character.maxHealth || 50,
-            maxHealth: character.maxHealth || character.health?.max || 50,
-            armorClass: character.armorClass || 10,
-            damageDie: character.damageDie || 4
-          };
-          set({ activeCharacter: updatedCharacter });
-          
-          // Auto-join guild chat if character is in a guild
-          if (character.guildId) {
-            get().autoJoinGuildChat(character.guildId);
-          }
-          
-          // Only show notification when manually switching characters (not during login)
-          get().addNotification(`Switched to ${character.name}`, 'success');
+          set({ activeCharacter: character });
         }
       },
       
-      updateCharacterProfileImage: (characterId: string, imageUrl: string) => {
-        const { isAuthenticated } = get();
-        
-        if (!isAuthenticated) {
-          get().addNotification('Please log in to update character profile', 'error');
-          return;
-        }
-        
-        set((state: GameState) => ({
-          characters: state.characters.map((c: Character) =>
-            c.id === characterId ? { ...c, profileImage: imageUrl } : c
+      updateCharacter: (characterId: string, updates: Partial<Character>) => {
+        set(state => ({
+          characters: state.characters.map(c => 
+            c.id === characterId ? { ...c, ...updates } : c
           ),
           activeCharacter: state.activeCharacter?.id === characterId 
-            ? { ...state.activeCharacter, profileImage: imageUrl }
+            ? { ...state.activeCharacter, ...updates }
             : state.activeCharacter
         }));
       },
       
-      addExperience: (amount: number) => {
-        const { activeCharacter, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) return;
-        
-        set((state: GameState) => ({
-          characters: state.characters.map((c: Character) =>
-            c.id === activeCharacter.id ? { ...c, experience: c.experience + amount } : c
-          ),
-          activeCharacter: { ...activeCharacter, experience: activeCharacter.experience + amount }
+      deleteCharacter: (characterId: string) => {
+        set(state => ({
+          characters: state.characters.filter(c => c.id !== characterId),
+          activeCharacter: state.activeCharacter?.id === characterId ? null : state.activeCharacter
         }));
       },
       
       gainExperience: (amount: number) => {
-        const { activeCharacter, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) return;
+        const state = get();
+        if (!state.activeCharacter) return;
         
-        const newExperience = activeCharacter.experience + amount;
-        let newLevel = activeCharacter.level;
-        let experienceToNextLevel = activeCharacter.experienceToNextLevel;
-        let statIncrease = 0;
+        let newExp = state.activeCharacter.experience + amount;
+        let newLevel = state.activeCharacter.level;
+        let expToNext = state.activeCharacter.experienceToNextLevel;
         
-        // Check for level up
-        if (newExperience >= experienceToNextLevel) {
+        // Level up logic
+        while (newExp >= expToNext) {
+          newExp -= expToNext;
           newLevel++;
-          statIncrease = 2; // Increase stats by 2 per level
-          experienceToNextLevel = Math.floor(experienceToNextLevel * 1.5); // Increase required XP by 50%
+          expToNext = newLevel * 100; // Simple level scaling
+          
+          // Level up notification
+          get().addNotification(`Level up! You are now level ${newLevel}!`, 'success');
+          
+          // Increase health and mana on level up
+          const healthIncrease = 20;
+          const manaIncrease = 10;
+          
+          get().updateCharacter(state.activeCharacter.id, {
+            level: newLevel,
+            experience: newExp,
+            experienceToNextLevel: expToNext,
+            health: {
+              current: state.activeCharacter.health.current + healthIncrease,
+              max: state.activeCharacter.health.max + healthIncrease
+            },
+            mana: {
+              current: state.activeCharacter.mana.current + manaIncrease,
+              max: state.activeCharacter.mana.max + manaIncrease
+            }
+          });
+          return;
         }
         
-        // Update stats on level up
-        const updatedStats = statIncrease > 0 ? {
-          ...activeCharacter.stats,
-          strength: activeCharacter.stats.strength + statIncrease,
-          dexterity: activeCharacter.stats.dexterity + statIncrease,
-          constitution: activeCharacter.stats.constitution + statIncrease,
-          intelligence: activeCharacter.stats.intelligence + statIncrease,
-          wisdom: activeCharacter.stats.wisdom + statIncrease,
-          charisma: activeCharacter.stats.charisma + statIncrease
-        } : activeCharacter.stats;
-        
-        // Recalculate health and mana based on new stats
-        const healthMax = statIncrease > 0 ? 50 + (updatedStats.constitution * 5) : activeCharacter.health.max;
-        const manaMax = statIncrease > 0 ? 30 + (updatedStats.intelligence * 3) : activeCharacter.mana.max;
-        
-        set((state: GameState) => ({
-          characters: state.characters.map((c: Character) =>
-            c.id === activeCharacter.id ? { 
-              ...c, 
-              experience: newExperience,
-              level: newLevel,
-              experienceToNextLevel,
-              stats: updatedStats,
-              health: { current: healthMax, max: healthMax },
-              mana: { current: manaMax, max: manaMax },
-              currentHealth: healthMax,
-              maxHealth: healthMax
-            } : c
-          ),
-          activeCharacter: { 
-            ...activeCharacter, 
-            experience: newExperience,
-            level: newLevel,
-            experienceToNextLevel,
-            stats: updatedStats,
-            health: { current: healthMax, max: healthMax },
-            mana: { current: manaMax, max: manaMax },
-            currentHealth: healthMax,
-            maxHealth: healthMax
-          }
-        }));
-      },
-      
-      addGold: (amount: number) => {
-        const { activeCharacter, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) return;
-        
-        set((state: GameState) => ({
-          characters: state.characters.map((c: Character) =>
-            c.id === activeCharacter.id ? { ...c, gold: c.gold + amount } : c
-          ),
-          activeCharacter: { ...activeCharacter, gold: activeCharacter.gold + amount }
-        }));
+        get().updateCharacter(state.activeCharacter.id, {
+          experience: newExp,
+          experienceToNextLevel: expToNext
+        });
       },
       
       gainGold: (amount: number) => {
-        const { activeCharacter, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) return;
+        const state = get();
+        if (!state.activeCharacter) return;
         
-        set((state: GameState) => ({
-          characters: state.characters.map((c: Character) =>
-            c.id === activeCharacter.id ? { ...c, gold: c.gold + amount } : c
-          ),
-          activeCharacter: { ...activeCharacter, gold: activeCharacter.gold + amount }
-        }));
-      },
-      
-      gainDiamonds: (amount: number) => {
-        const { isAuthenticated } = get();
-        if (!isAuthenticated) return;
-        
-        set((state: GameState) => ({
-          diamonds: state.diamonds + amount
-        }));
+        get().updateCharacter(state.activeCharacter.id, {
+          gold: state.activeCharacter.gold + amount
+        });
       },
       
       spendGold: (amount: number) => {
-        const { activeCharacter, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated || activeCharacter.gold < amount) return false;
+        const state = get();
+        if (!state.activeCharacter || state.activeCharacter.gold < amount) {
+          return false;
+        }
         
-        set((state: GameState) => ({
-          characters: state.characters.map((c: Character) =>
-            c.id === activeCharacter.id ? { ...c, gold: c.gold - amount } : c
-          ),
-          activeCharacter: { ...activeCharacter, gold: activeCharacter.gold - amount }
-        }));
-        
+        get().updateCharacter(state.activeCharacter.id, {
+          gold: state.activeCharacter.gold - amount
+        });
         return true;
       },
       
       updateCharacterHealth: (characterId: string, newHealth: number) => {
-        const { activeCharacter, isAuthenticated } = get();
-        if (!activeCharacter || activeCharacter.id !== characterId || !isAuthenticated) return;
+        const state = get();
+        const character = state.characters.find(c => c.id === characterId);
+        if (!character) return;
         
-        // Ensure health doesn't exceed max
-        const clampedHealth = Math.min(newHealth, activeCharacter.health.max);
+        const clampedHealth = Math.max(0, Math.min(newHealth, character.health.max));
         
-        set((state: GameState) => ({
-          characters: state.characters.map((c: Character) =>
-            c.id === characterId ? { 
-              ...c, 
-              health: { ...c.health, current: clampedHealth },
-              currentHealth: clampedHealth
-            } : c
-          ),
-          activeCharacter: { 
-            ...activeCharacter, 
-            health: { ...activeCharacter.health, current: clampedHealth },
-            currentHealth: clampedHealth
-          }
-        }));
-      },
-      
-      // Territory Functions
-      claimTerritory: (territoryId: string, guildId: string) => {
-        const { isAuthenticated } = get();
-        if (!isAuthenticated) return;
-        
-        set((state: GameState) => ({
-          territories: state.territories.map(territory =>
-            territory.id === territoryId
-              ? { ...territory, controllingGuild: guildId }
-              : territory
-          )
-        }));
-        
-        // Check if Royal Spire should be unlocked after claiming
-        get().checkRoyalSpireUnlock();
-      },
-      
-      unlockRoyalSpire: () => {
-        const { isAuthenticated, royalSpireUnlocked } = get();
-        if (!isAuthenticated || royalSpireUnlocked) return;
-        
-        set((state: GameState) => ({
-          territories: state.territories.map(territory =>
-            territory.isRoyalSpire
-              ? { ...territory, isClaimable: true }
-              : territory
-          ),
-          royalSpireUnlocked: true
-        }));
-        
-        get().addNotification('🏰 The Royal Spire has emerged! A guild may now claim the crown!', 'success');
-      },
-      
-      checkRoyalSpireUnlock: () => {
-        const { territories, guilds, royalSpireUnlocked } = get();
-        
-        if (royalSpireUnlocked) return; // Already unlocked
-        
-        // Check if any guild controls all claimable territories (excluding water and royal spire)
-        const claimableTerritories = territories.filter(t => t.isClaimable !== false && !t.isRoyalSpire);
-        const guildTerritoryCount: Record<string, number> = {};
-        
-        claimableTerritories.forEach(territory => {
-          if (territory.controllingGuild) {
-            guildTerritoryCount[territory.controllingGuild] = 
-              (guildTerritoryCount[territory.controllingGuild] || 0) + 1;
+        get().updateCharacter(characterId, {
+          health: {
+            ...character.health,
+            current: clampedHealth
           }
         });
-        
-        const totalClaimableTerritories = claimableTerritories.length;
-        const kingGuildId = Object.keys(guildTerritoryCount).find(
-          guildId => guildTerritoryCount[guildId] === totalClaimableTerritories
-        );
-        
-        // If a guild controls all territories, unlock the Royal Spire
-        if (kingGuildId) {
-          get().unlockRoyalSpire();
-        }
       },
       
-      // Guild Battle Functions
-      initiateGuildBattle: (territoryId: string, attackingGuildId: string) => {
-        const { territories, guilds, activeCharacter, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) return;
+      // Inventory management
+      addItemToInventory: (item: Item) => {
+        const state = get();
+        if (!state.activeCharacter) return;
         
-        const territory = territories.find(t => t.id === territoryId);
-        const attackingGuild = guilds.find(g => g.id === attackingGuildId);
-        const defendingGuild = territory?.controllingGuild 
-          ? guilds.find(g => g.id === territory.controllingGuild)
-          : undefined;
-        
-        if (!territory || !attackingGuild) return;
-        
-        const newBattle: GuildBattle = {
-          id: `battle_${Date.now()}`,
-          territoryId,
-          attackingGuild,
-          defendingGuild,
-          attackers: [activeCharacter.id],
-          defenders: [],
-          status: 'recruiting',
-          startTime: Date.now() + 300000, // 5 minutes to recruit
-          maxParticipants: 3,
-          currentTurn: null
-        };
-        
-        set((state: GameState) => ({
-          guildBattles: [...state.guildBattles, newBattle]
-        }));
-        
-        get().addNotification('Guild battle initiated! Recruiting participants...', 'info');
+        get().updateCharacter(state.activeCharacter.id, {
+          inventory: [...(state.activeCharacter.inventory || []), item]
+        });
       },
       
-      joinGuildBattle: (battleId: string, side: 'attacker' | 'defender') => {
-        const { activeCharacter, guildBattles, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) return;
+      removeItemFromInventory: (itemId: string) => {
+        const state = get();
+        if (!state.activeCharacter) return;
         
-        set((state: GameState) => ({
-          guildBattles: state.guildBattles.map(battle => {
-            if (battle.id === battleId && battle.status === 'recruiting') {
-              if (side === 'attacker' && battle.attackers.length < 3) {
-                return { ...battle, attackers: [...battle.attackers, activeCharacter.id] };
-              } else if (side === 'defender' && battle.defenders.length < 3) {
-                return { ...battle, defenders: [...battle.defenders, activeCharacter.id] };
-              }
-            }
-            return battle;
-          })
-        }));
+        get().updateCharacter(state.activeCharacter.id, {
+          inventory: (state.activeCharacter.inventory || []).filter(item => item.id !== itemId)
+        });
       },
       
-      startGuildBattle: (battleId: string) => {
-        const { isAuthenticated } = get();
-        if (!isAuthenticated) return;
+      equipItem: (itemId: string, slot: string) => {
+        const state = get();
+        if (!state.activeCharacter) return;
         
-        set((state: GameState) => ({
-          guildBattles: state.guildBattles.map(battle =>
-            battle.id === battleId
-              ? { ...battle, status: 'active', currentTurn: battle.attackers[0] }
-              : battle
-          ),
-          activeGuildBattle: state.guildBattles.find(b => b.id === battleId) || null
-        }));
-      },
-      
-      // Royal Guild Functions
-      assignGuildRole: (guildId: string, characterId: string, role: GuildRole) => {
-        const { isAuthenticated, guilds, characters } = get();
-        if (!isAuthenticated) return;
+        const item = state.activeCharacter.inventory?.find(i => i.id === itemId);
+        if (!item) return;
         
-        const guild = guilds.find(g => g.id === guildId);
-        if (!guild || !guild.isRoyal) return;
+        // Remove item from inventory and add to equipment
+        const newInventory = (state.activeCharacter.inventory || []).filter(i => i.id !== itemId);
+        const newEquipment = { ...state.activeCharacter.equipment, [slot]: item };
         
-        // Remove the role from any other character first
-        set((state: GameState) => ({
-          characters: state.characters.map(c => 
-            c.guildId === guildId && c.guildRole === role 
-              ? { ...c, guildRole: 'Member' }
-              : c
-          ),
-          guilds: state.guilds.map(g => 
-            g.id === guildId 
-              ? { 
-                  ...g, 
-                  royalRoles: { 
-                    ...g.royalRoles, 
-                    [role]: characterId 
-                  } 
-                }
-              : g
-          )
-        }));
-        
-        // Assign the new role
-        set((state: GameState) => ({
-          characters: state.characters.map(c => 
-            c.id === characterId 
-              ? { ...c, guildRole: role }
-              : c
-          ),
-          activeCharacter: state.activeCharacter?.id === characterId
-            ? { ...state.activeCharacter, guildRole: role }
-            : state.activeCharacter
-        }));
-        
-        // Apply royal buffs
-        get().applyRoyalBuffs(characterId);
-        
-        const character = characters.find(c => c.id === characterId);
-        get().addNotification(`${character?.name} has been appointed as ${role}! ${guildRoleInfo[role].emoji}`, 'success');
-      },
-      
-      removeGuildRole: (guildId: string, characterId: string) => {
-        const { isAuthenticated } = get();
-        if (!isAuthenticated) return;
-        
-        // Remove royal buffs first
-        get().removeRoyalBuffs(characterId);
-        
-        set((state: GameState) => ({
-          characters: state.characters.map(c => 
-            c.id === characterId 
-              ? { ...c, guildRole: 'Member' }
-              : c
-          ),
-          activeCharacter: state.activeCharacter?.id === characterId
-            ? { ...state.activeCharacter, guildRole: 'Member' }
-            : state.activeCharacter,
-          guilds: state.guilds.map(g => {
-            if (g.id === guildId && g.royalRoles) {
-              const newRoyalRoles = { ...g.royalRoles };
-              Object.keys(newRoyalRoles).forEach(role => {
-                if (newRoyalRoles[role as keyof typeof newRoyalRoles] === characterId) {
-                  delete newRoyalRoles[role as keyof typeof newRoyalRoles];
-                }
-              });
-              return { ...g, royalRoles: newRoyalRoles };
-            }
-            return g;
-          })
-        }));
-      },
-      
-      getGuildRoleInfo: (role: GuildRole) => {
-        return guildRoleInfo[role];
-      },
-      
-      applyRoyalBuffs: (characterId: string) => {
-        const { characters, activeCharacter } = get();
-        const character = characters.find(c => c.id === characterId);
-        
-        if (!character || !character.guildRole || character.guildRole === 'Member') return;
-        
-        const roleInfo = guildRoleInfo[character.guildRole];
-        const royalBuff = {
-          id: `royal_${character.guildRole.toLowerCase()}`,
-          name: `Royal ${character.guildRole}`,
-          description: roleInfo.description,
-          duration: -1, // Permanent while in role
-          effects: roleInfo.buffs
-        };
-        
-        set((state: GameState) => ({
-          characters: state.characters.map(c => 
-            c.id === characterId 
-              ? { 
-                  ...c, 
-                  buffs: [...(c.buffs || []).filter(b => !b.id.startsWith('royal_')), royalBuff]
-                }
-              : c
-          ),
-          activeCharacter: state.activeCharacter?.id === characterId
-            ? { 
-                ...state.activeCharacter, 
-                buffs: [...(state.activeCharacter.buffs || []).filter(b => !b.id.startsWith('royal_')), royalBuff]
-              }
-            : state.activeCharacter
-        }));
-      },
-      
-      removeRoyalBuffs: (characterId: string) => {
-        set((state: GameState) => ({
-          characters: state.characters.map(c => 
-            c.id === characterId 
-              ? { 
-                  ...c, 
-                  buffs: (c.buffs || []).filter(b => !b.id.startsWith('royal_'))
-                }
-              : c
-          ),
-          activeCharacter: state.activeCharacter?.id === characterId
-            ? { 
-                ...state.activeCharacter, 
-                buffs: (state.activeCharacter.buffs || []).filter(b => !b.id.startsWith('royal_'))
-              }
-            : state.activeCharacter
-        }));
-      },
-      
-      // Inventory Functions
-      addItem: (item: Item) => {
-        const { activeCharacter, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) return;
-        
-        // Ensure inventory exists
-        const inventory = activeCharacter.inventory || [];
-        
-        set((state: GameState) => ({
-          characters: state.characters.map((c: Character) =>
-            c.id === activeCharacter.id ? { ...c, inventory: [...inventory, item] } : c
-          ),
-          activeCharacter: { ...activeCharacter, inventory: [...inventory, item] }
-        }));
-      },
-      
-      removeItem: (itemId: string) => {
-        const { activeCharacter, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) return;
-        
-        // Ensure inventory exists
-        const inventory = activeCharacter.inventory || [];
-        
-        set((state: GameState) => ({
-          characters: state.characters.map((c: Character) =>
-            c.id === activeCharacter.id 
-              ? { ...c, inventory: inventory.filter((i: Item) => i.id !== itemId) }
-              : c
-          ),
-          activeCharacter: { 
-            ...activeCharacter, 
-            inventory: inventory.filter((i: Item) => i.id !== itemId) 
-          }
-        }));
-      },
-      
-      equipItem: (itemId: string, slot?: string) => {
-        const { activeCharacter, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) return;
-        
-        // Ensure inventory exists
-        const inventory = activeCharacter.inventory || [];
-        const item = inventory.find(i => i.id === itemId);
-        
-        if (!item || !item.equipSlot) return;
-        
-        // Use provided slot or item's default slot
-        let targetSlot = slot || item.equipSlot;
-        
-        // Handle slot mapping for different item types
-        if (item.equipSlot === 'weapon' && !slot) {
-          targetSlot = 'mainHand';
-        } else if (item.equipSlot === 'armor' && !slot) {
-          targetSlot = 'chest';
-        } else if (item.equipSlot === 'accessory' && !slot) {
-          targetSlot = 'ring1';
-        }
-        
-        // Validate that the item can be equipped in the target slot
-        const isValidSlot = (
-          (item.equipSlot === 'weapon' && (targetSlot === 'mainHand' || targetSlot === 'offHand')) ||
-          (item.equipSlot === 'armor' && (targetSlot === 'chest' || targetSlot === 'head' || targetSlot === 'hands' || targetSlot === 'legs' || targetSlot === 'feet')) ||
-          (item.equipSlot === 'accessory' && (targetSlot === 'ring1' || targetSlot === 'ring2' || targetSlot === 'neck')) ||
-          item.equipSlot === targetSlot
-        );
-        
-        if (!isValidSlot) return;
-        
-        // If there's already an item in the slot, unequip it first
-        const equipment = activeCharacter.equipment || {};
-        if (equipment[targetSlot]) {
-          get().unequipItem(targetSlot);
-        }
-        
-        // Update equipment
-        const updatedEquipment = { 
-          ...equipment,
-          [targetSlot]: item 
-        };
-        
-        // Recalculate all stats from base + all equipment
-        const baseStats = getBaseStats(activeCharacter);
-        const updatedStats = calculateTotalStats(baseStats, updatedEquipment);
-        
-        set((state: GameState) => ({
-          characters: state.characters.map((c: Character) =>
-            c.id === activeCharacter.id ? { 
-              ...c, 
-              equipment: updatedEquipment,
-              stats: updatedStats
-            } : c
-          ),
-          activeCharacter: { 
-            ...activeCharacter, 
-            equipment: updatedEquipment,
-            stats: updatedStats
-          }
-        }));
-        
-        // Remove item from inventory
-        get().removeItem(itemId);
-        
-        // Calculate stat boosts for notification
-        const statBoosts: string[] = [];
-        if (item.stats) {
-          Object.entries(item.stats).forEach(([stat, value]) => {
-            if (value && value > 0) {
-              const statName = stat.charAt(0).toUpperCase() + stat.slice(1);
-              statBoosts.push(`+${value} ${statName}`);
-            }
-          });
-        }
-        if (item.boost) {
-          Object.entries(item.boost).forEach(([stat, value]) => {
-            if (value && value > 0) {
-              const statName = stat.charAt(0).toUpperCase() + stat.slice(1);
-              statBoosts.push(`+${value} ${statName}`);
-            }
-          });
-        }
-        
-        // Add notification with stat boosts
-        const boostText = statBoosts.length > 0 ? ` (${statBoosts.join(', ')})` : '';
-        get().addNotification(`${item.name} equipped successfully!${boostText}`, 'success');
+        get().updateCharacter(state.activeCharacter.id, {
+          inventory: newInventory,
+          equipment: newEquipment
+        });
       },
       
       unequipItem: (slot: string) => {
-        const { activeCharacter, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) return;
+        const state = get();
+        if (!state.activeCharacter) return;
         
-        const equipment = activeCharacter.equipment || {};
-        const item = equipment[slot];
-        const updatedEquipment = { ...equipment };
-        delete updatedEquipment[slot];
+        const item = state.activeCharacter.equipment?.[slot];
+        if (!item) return;
         
-        // Recalculate all stats from base + remaining equipment
-        const baseStats = getBaseStats(activeCharacter);
-        const updatedStats = calculateTotalStats(baseStats, updatedEquipment);
+        // Remove item from equipment and add to inventory
+        const newEquipment = { ...state.activeCharacter.equipment };
+        delete newEquipment[slot];
+        const newInventory = [...(state.activeCharacter.inventory || []), item];
         
-        set((state: GameState) => ({
-          characters: state.characters.map((c: Character) =>
-            c.id === activeCharacter.id ? { 
-              ...c, 
-              equipment: updatedEquipment,
-              stats: updatedStats
-            } : c
-          ),
-          activeCharacter: { 
-            ...activeCharacter, 
-            equipment: updatedEquipment,
-            stats: updatedStats
-          }
-        }));
-        
-        // Add item back to inventory if it exists
-        if (item) {
-          get().addItem(item);
-        }
+        get().updateCharacter(state.activeCharacter.id, {
+          inventory: newInventory,
+          equipment: newEquipment
+        });
       },
       
       useItem: (itemId: string) => {
-        const { activeCharacter, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) return false;
+        const state = get();
+        if (!state.activeCharacter) return false;
         
-        // Ensure inventory exists
-        const inventory = activeCharacter.inventory || [];
-        const item = inventory.find(i => i.id === itemId);
-        
+        const item = state.activeCharacter.inventory?.find(i => i.id === itemId);
         if (!item || item.type !== 'potion') return false;
         
-        // Apply potion effects
-        if (item.effects) {
-          item.effects.forEach(effect => {
-            if (effect.type === 'heal') {
-              const newHealth = Math.min(
-                activeCharacter.health.max,
-                activeCharacter.health.current + effect.value
-              );
-              get().updateCharacterHealth(activeCharacter.id, newHealth);
-            } else if (effect.type === 'revive') {
-              // Revive potions can only be used when character is fainted
-              if (activeCharacter.health.current <= 0) {
-                get().updateCharacterHealth(activeCharacter.id, effect.value);
-              }
+        // Apply item effects
+        let healthChange = 0;
+        let manaChange = 0;
+        let wasRevived = false;
+        
+        item.effects?.forEach(effect => {
+          if (effect.type === 'heal') {
+            healthChange += effect.value;
+          } else if (effect.type === 'mana') {
+            manaChange += effect.value;
+          } else if (effect.type === 'revive') {
+            if (state.activeCharacter!.health.current <= 0) {
+              healthChange = Math.floor(state.activeCharacter!.health.max * (effect.value / 100));
+              wasRevived = true;
             }
-            // Handle other effect types as needed
-          });
-        }
-        
-        // Remove the item
-        get().removeItem(itemId);
-        return true;
-      },
-      
-      // Shop Functions
-      buyItem: (itemId: string) => {
-        const { isAuthenticated } = get();
-        if (!isAuthenticated) {
-          get().addNotification('Please log in to purchase items', 'error');
-          return false;
-        }
-        
-        const shopItem = get().shopItems.find((item: ShopItem) => item.id === itemId);
-        if (!shopItem || shopItem.stock <= 0) {
-          get().addNotification('Item out of stock!', 'error');
-          return false;
-        }
-        
-        if (get().spendGold(shopItem.price)) {
-          get().addItem(shopItem.item);
-          get().addNotification(`Purchased ${shopItem.item.name} for ${shopItem.price} gold!`, 'success');
-          
-          // Decrease stock
-          set((state: GameState) => ({
-            shopItems: state.shopItems.map((item: ShopItem) =>
-              item.id === itemId ? { ...item, stock: item.stock - 1 } : item
-            )
-          }));
-          
-          return true;
-        }
-        get().addNotification('Not enough gold!', 'error');
-        return false;
-      },
-      
-      purchaseItem: (itemId: string, quantity: number = 1) => {
-        const { isAuthenticated } = get();
-        if (!isAuthenticated) {
-          get().addNotification('Please log in to purchase items', 'error');
-          return false;
-        }
-        
-        const shopItem = get().shopItems.find((item: ShopItem) => item.id === itemId);
-        if (!shopItem || shopItem.stock < quantity) {
-          get().addNotification('Not enough stock available!', 'error');
-          return false;
-        }
-        
-        const totalCost = shopItem.price * quantity;
-        if (get().spendGold(totalCost)) {
-          // Add items to inventory
-          for (let i = 0; i < quantity; i++) {
-            get().addItem({ ...shopItem.item, id: `${shopItem.item.id}_${Date.now()}_${i}` });
           }
-          
-          get().addNotification(`Purchased ${quantity}x ${shopItem.item.name} for ${totalCost} gold!`, 'success');
-          
-          // Decrease stock
-          set((state: GameState) => ({
-            shopItems: state.shopItems.map((item: ShopItem) =>
-              item.id === itemId ? { ...item, stock: item.stock - quantity } : item
-            )
-          }));
-          
-          return true;
-        }
-        get().addNotification('Not enough gold!', 'error');
-        return false;
-      },
-      
-      sellItem: (itemId: string) => {
-        const { activeCharacter, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) return false;
+        });
         
-        // Ensure inventory exists
-        const inventory = activeCharacter.inventory || [];
-        const item = inventory.find((i: Item) => i.id === itemId);
-        
-        if (!item) return false;
-        
-        const sellPrice = Math.floor(item.value * 0.5); // Sell for 50% of value
-        get().addGold(sellPrice);
-        get().removeItem(itemId);
-        get().addNotification(`Sold ${item.name} for ${sellPrice} gold!`, 'success');
-        
-        return true;
-      },
-      
-      // Combat Functions
-      getAvailableEnemies: () => {
-        const character = get().activeCharacter;
-        if (!character) return [];
-        
-        // Get all enemies from the fragmented system and custom enemies
-        const allEnemies = [...getAllEnemies(), ...get().customEnemies];
-        
-        // Filter enemies based on character level (show enemies within reasonable range)
-        const availableEnemies = allEnemies.filter((enemy: Enemy) => 
-          enemy.requiredLevel <= character.level + 5 // Allow challenging enemies
+        // Apply changes
+        const newHealth = Math.min(
+          state.activeCharacter.health.max,
+          Math.max(0, state.activeCharacter.health.current + healthChange)
+        );
+        const newMana = Math.min(
+          state.activeCharacter.mana.max,
+          Math.max(0, state.activeCharacter.mana.current + manaChange)
         );
         
-        return availableEnemies.sort((a: Enemy, b: Enemy) => a.requiredLevel - b.requiredLevel);
+        get().updateCharacter(state.activeCharacter.id, {
+          health: { ...state.activeCharacter.health, current: newHealth },
+          mana: { ...state.activeCharacter.mana, current: newMana }
+        });
+        
+        // Remove item from inventory
+        get().removeItemFromInventory(itemId);
+        
+        // Show notification
+        if (wasRevived) {
+          get().addNotification('Your character has been revived!', 'success');
+        } else if (healthChange > 0) {
+          get().addNotification(`Restored ${healthChange} health!`, 'success');
+        }
+        if (manaChange > 0) {
+          get().addNotification(`Restored ${manaChange} mana!`, 'info');
+        }
+        
+        return true;
       },
       
-      // Helper functions for stat calculation
-      getBaseStats: getBaseStats,
-      calculateTotalStats: calculateTotalStats,
+      // Chat actions
+      setActiveChannel: (channelId: string) => {
+        set({ activeChannel: channelId });
+      },
       
-      startEnemyAttack: () => {
-        const { activeCharacter, selectedOpponent, updateCharacterHealth, isAuthenticated } = get();
-        if (!activeCharacter || !selectedOpponent || !isAuthenticated) return;
+      addChatMessage: (message: ChatMessage) => {
+        set(state => ({
+          chatLobbies: state.chatLobbies.map(lobby =>
+            lobby.id === state.activeChannel
+              ? { ...lobby, messages: [...lobby.messages, message] }
+              : lobby
+          )
+        }));
+      },
+      
+      createChatLobby: (name: string, description: string, isPrivate: boolean) => {
+        const newLobby: ChatLobby = {
+          id: Date.now().toString(),
+          name,
+          description,
+          isPrivate,
+          members: [],
+          messages: [],
+          createdAt: Date.now()
+        };
         
-        // Enhanced AI: Calculate damage based on enemy stats with strategic variation
-        const baseDamage = Math.floor(selectedOpponent.attack * 0.8 + Math.random() * selectedOpponent.attack * 0.4);
-        // Consider player defense for more dynamic combat
-        const defenseFactor = activeCharacter.equipment && activeCharacter.equipment.armor 
-          ? (activeCharacter.equipment.armor.stats?.defense || 0) / 100 
-          : 0;
-        const finalDamage = Math.max(1, Math.floor(baseDamage * (1 - defenseFactor)));
-        const newHealth = Math.max(0, activeCharacter.health.current - finalDamage);
+        set(state => ({
+          chatLobbies: [...state.chatLobbies, newLobby]
+        }));
+      },
+      
+      joinChatLobby: (lobbyId: string) => {
+        const state = get();
+        if (!state.activeCharacter) return;
         
-        updateCharacterHealth(activeCharacter.id, newHealth);
+        set(state => ({
+          chatLobbies: state.chatLobbies.map(lobby =>
+            lobby.id === lobbyId
+              ? { ...lobby, members: [...lobby.members, state.activeCharacter!.id] }
+              : lobby
+          )
+        }));
+      },
+      
+      leaveChatLobby: (lobbyId: string) => {
+        const state = get();
+        if (!state.activeCharacter) return;
         
-        // Log the attack for combat feedback
-        set((state: GameState) => ({
-          chatLobbies: state.chatLobbies.map((lobby: ChatLobby) => 
-            lobby.id === 'combat-log'
-              ? { 
-                  ...lobby, 
-                  messages: [
-                    ...(lobby.messages || []),
-                    {
-                      id: Date.now().toString(),
-                      sender: 'System',
-                      content: `Enemy ${selectedOpponent.name} attacks you for ${finalDamage} damage!`,
-                      timestamp: Date.now(),
-                      reactions: []
-                    }
-                  ]
+        set(state => ({
+          chatLobbies: state.chatLobbies.map(lobby =>
+            lobby.id === lobbyId
+              ? { ...lobby, members: lobby.members.filter(id => id !== state.activeCharacter!.id) }
+              : lobby
+          )
+        }));
+      },
+      
+      cleanupEmptyLobbies: () => {
+        set(state => ({
+          chatLobbies: state.chatLobbies.filter(lobby => 
+            lobby.members.length > 0 || lobby.id === 'kingdom_chat'
+          )
+        }));
+      },
+      
+      addReactionToMessage: (messageId: string, emoji: string) => {
+        set(state => ({
+          chatLobbies: state.chatLobbies.map(lobby =>
+            lobby.id === state.activeChannel
+              ? {
+                  ...lobby,
+                  messages: lobby.messages.map(msg =>
+                    msg.id === messageId
+                      ? {
+                          ...msg,
+                          reactions: [
+                            ...(msg.reactions || []),
+                            { emoji, count: 1, users: [state.activeCharacter?.id || ''] }
+                          ]
+                        }
+                      : msg
+                  )
                 }
               : lobby
           )
         }));
       },
       
-      handleDefeat: () => {
-        const { activeCharacter, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) return;
+      kickFromChat: (userId: string, channelId: string) => {
+        // Admin only action
+        const state = get();
+        if (state.userRole !== 'admin') return;
         
-        // Set health to 0 (fainted state)
-        get().updateCharacterHealth(activeCharacter.id, 0);
+        set(state => ({
+          chatLobbies: state.chatLobbies.map(lobby =>
+            lobby.id === channelId
+              ? { ...lobby, members: lobby.members.filter(id => id !== userId) }
+              : lobby
+          )
+        }));
+      },
+      
+      banUser: (userId: string, channelId: string) => {
+        // Admin only action
+        const state = get();
+        if (state.userRole !== 'admin') return;
         
-        // Apply defeat penalties if needed
-        // For example, lose some gold
-        const goldLoss = Math.floor(activeCharacter.gold * 0.1); // Lose 10% of gold
-        if (goldLoss > 0) {
-          set((state: GameState) => ({
-            characters: state.characters.map((c: Character) =>
-              c.id === activeCharacter.id ? { ...c, gold: c.gold - goldLoss } : c
-            ),
-            activeCharacter: { ...activeCharacter, gold: activeCharacter.gold - goldLoss }
+        // Implementation would include ban list
+        get().kickFromChat(userId, channelId);
+      },
+      
+      setChatPopout: (popout: boolean) => {
+        set({ chatPopout: popout });
+      },
+      
+      connectToChat: (userId: string, userName: string) => {
+        set(state => ({
+          onlineUsers: [
+            ...state.onlineUsers.filter(u => u.id !== userId),
+            { id: userId, name: userName, channelId: state.activeChannel }
+          ]
+        }));
+      },
+      
+      disconnectFromChat: (userId: string) => {
+        set(state => ({
+          onlineUsers: state.onlineUsers.filter(u => u.id !== userId)
+        }));
+      },
+      
+      updateUserPresence: (userId: string, isOnline: boolean, channelId?: string) => {
+        if (isOnline && channelId) {
+          set(state => ({
+            onlineUsers: [
+              ...state.onlineUsers.filter(u => u.id !== userId),
+              { id: userId, name: userId, channelId }
+            ]
+          }));
+        } else {
+          set(state => ({
+            onlineUsers: state.onlineUsers.filter(u => u.id !== userId)
           }));
         }
       },
       
-      // Familiar Functions
-      canSummonFamiliar: (type: FamiliarType) => {
-        const { activeCharacter, diamonds, isAuthenticated } = get();
+      // Guild management
+      createGuild: (name: string, description: string, clanTag: string) => {
+        const state = get();
+        if (!state.activeCharacter) return;
         
-        if (!isAuthenticated) {
-          return { canSummon: false, reason: 'Please log in', cost: familiarCosts[type] };
-        }
+        const newGuild: Guild = {
+          id: Date.now().toString(),
+          name,
+          description,
+          clanTag,
+          members: [{
+            id: state.activeCharacter.id,
+            name: state.activeCharacter.name,
+            rank: 'Leader',
+            joinedAt: Date.now()
+          }],
+          level: 1,
+          createdAt: Date.now(),
+          isRoyal: false,
+          royalRoles: {}
+        };
         
-        if (!activeCharacter) {
-          return { canSummon: false, reason: 'No active character', cost: familiarCosts[type] };
-        }
-        
-        if (activeCharacter.familiar) {
-          return { canSummon: false, reason: 'Already have a familiar', cost: familiarCosts[type] };
-        }
-        
-        const requiredLevel = familiarLevelRequirements[type];
-        if (activeCharacter.level < requiredLevel) {
-          return { 
-            canSummon: false, 
-            reason: `Requires level ${requiredLevel}`, 
-            cost: familiarCosts[type] 
-          };
-        }
-        
-        const cost = familiarCosts[type];
-        if (diamonds < cost) {
-          return { 
-            canSummon: false, 
-            reason: `Need ${cost} diamonds (have ${diamonds})`, 
-            cost 
-          };
-        }
-        
-        return { canSummon: true, reason: '', cost };
-      },
-      
-      summonFamiliar: (type: FamiliarType, name: string) => {
-        const { canSummon, cost } = get().canSummonFamiliar(type);
-        if (!canSummon) return false;
-        
-        const { activeCharacter, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) return false;
-        
-        // Spend diamonds
-        set((state: GameState) => ({
-          diamonds: state.diamonds - cost
+        set(state => ({
+          guilds: [...state.guilds, newGuild]
         }));
         
-        // Add familiar to character
-        const familiar = {
-          type,
-          name,
-          level: 1,
-          loyalty: 50,
-          health: {
-            current: 30,
-            max: 30
+        // Update character's guild ID
+        get().updateCharacter(state.activeCharacter.id, {
+          guildId: newGuild.id
+        });
+      },
+      
+      joinGuild: (guildId: string) => {
+        const state = get();
+        if (!state.activeCharacter) return;
+        
+        set(state => ({
+          guilds: state.guilds.map(guild =>
+            guild.id === guildId
+              ? {
+                  ...guild,
+                  members: [...guild.members, {
+                    id: state.activeCharacter!.id,
+                    name: state.activeCharacter!.name,
+                    rank: 'Member',
+                    joinedAt: Date.now()
+                  }]
+                }
+              : guild
+          )
+        }));
+        
+        // Update character's guild ID
+        get().updateCharacter(state.activeCharacter.id, {
+          guildId: guildId
+        });
+      },
+      
+      leaveGuild: () => {
+        const state = get();
+        if (!state.activeCharacter || !state.activeCharacter.guildId) return;
+        
+        const guildId = state.activeCharacter.guildId;
+        
+        set(state => ({
+          guilds: state.guilds.map(guild =>
+            guild.id === guildId
+              ? {
+                  ...guild,
+                  members: guild.members.filter(m => m.id !== state.activeCharacter!.id)
+                }
+              : guild
+          )
+        }));
+        
+        // Update character to remove guild ID and role
+        get().updateCharacter(state.activeCharacter.id, {
+          guildId: undefined,
+          guildRole: undefined
+        });
+      },
+      
+      assignGuildRole: (guildId: string, characterId: string, role: GuildRole) => {
+        const state = get();
+        if (!state.activeCharacter) return;
+        
+        // Check if user is guild leader
+        const guild = state.guilds.find(g => g.id === guildId);
+        if (!guild) return;
+        
+        const userMember = guild.members.find(m => m.id === state.activeCharacter!.id);
+        if (!userMember || userMember.rank !== 'Leader') return;
+        
+        // Update guild's royal roles
+        set(state => ({
+          guilds: state.guilds.map(g =>
+            g.id === guildId
+              ? {
+                  ...g,
+                  royalRoles: {
+                    ...g.royalRoles,
+                    [role]: characterId
+                  }
+                }
+              : g
+          )
+        }));
+        
+        // Update character's guild role
+        get().updateCharacter(characterId, {
+          guildRole: role
+        });
+      },
+      
+      removeGuildRole: (guildId: string, characterId: string) => {
+        const state = get();
+        if (!state.activeCharacter) return;
+        
+        // Check if user is guild leader
+        const guild = state.guilds.find(g => g.id === guildId);
+        if (!guild) return;
+        
+        const userMember = guild.members.find(m => m.id === state.activeCharacter!.id);
+        if (!userMember || userMember.rank !== 'Leader') return;
+        
+        // Find and remove the role
+        const newRoyalRoles = { ...guild.royalRoles };
+        Object.keys(newRoyalRoles).forEach(role => {
+          if (newRoyalRoles[role as keyof typeof newRoyalRoles] === characterId) {
+            delete newRoyalRoles[role as keyof typeof newRoyalRoles];
+          }
+        });
+        
+        set(state => ({
+          guilds: state.guilds.map(g =>
+            g.id === guildId
+              ? { ...g, royalRoles: newRoyalRoles }
+              : g
+          )
+        }));
+        
+        // Update character to remove guild role
+        get().updateCharacter(characterId, {
+          guildRole: undefined
+        });
+      },
+      
+      getGuildRoleInfo: (role: GuildRole) => {
+        const roleInfo = {
+          King: {
+            emoji: '👑',
+            description: 'Supreme ruler of the kingdom with ultimate authority',
+            buffs: { strength: 5, intelligence: 3, charisma: 4 }
           },
-          mana: {
-            current: 20,
-            max: 20
+          Queen: {
+            emoji: '👸',
+            description: 'Royal consort with diplomatic and magical prowess',
+            buffs: { wisdom: 5, charisma: 4, intelligence: 3 }
           },
-          stats: {
-            strength: 8,
-            dexterity: 10,
-            constitution: 8,
-            intelligence: 10,
-            wisdom: 8,
-            charisma: 6
+          Knight: {
+            emoji: '⚔️',
+            description: 'Elite warrior champion of the realm',
+            buffs: { strength: 4, constitution: 4, dexterity: 2 }
+          },
+          Bishop: {
+            emoji: '🛡️',
+            description: 'High priest with divine blessing and protection',
+            buffs: { wisdom: 4, constitution: 3, charisma: 3 }
+          },
+          Member: {
+            emoji: '',
+            description: 'Regular guild member',
+            buffs: {}
           }
         };
         
-        set((state: GameState) => ({
-          characters: state.characters.map((c: Character) =>
-            c.id === activeCharacter.id ? { ...c, familiar } : c
-          ),
-          activeCharacter: { ...activeCharacter, familiar }
-        }));
-        
-        return true;
+        return roleInfo[role] || roleInfo.Member;
       },
       
-      dismissFamiliar: () => {
-        const { activeCharacter, isAuthenticated } = get();
-        if (!activeCharacter || !activeCharacter.familiar || !isAuthenticated) return;
-        
-        set((state: GameState) => ({
-          characters: state.characters.map((c: Character) =>
-            c.id === activeCharacter.id ? { ...c, familiar: undefined } : c
-          ),
-          activeCharacter: { ...activeCharacter, familiar: undefined }
-        }));
-      },
-      
-      // Party Functions
+      // Party management
       createParty: (name: string) => {
-        const { activeCharacter, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) return;
+        const state = get();
+        if (!state.activeCharacter) return;
         
         const newParty: Party = {
           id: Date.now().toString(),
           name,
-          leaderId: activeCharacter.id,
+          leaderId: state.activeCharacter.id,
           members: [{
-            id: activeCharacter.id,
-            name: activeCharacter.name,
-            level: activeCharacter.level,
-            class: activeCharacter.class,
+            id: state.activeCharacter.id,
+            name: state.activeCharacter.name,
+            level: state.activeCharacter.level,
+            class: state.activeCharacter.class || 'Unknown',
             isOnline: true
           }],
           maxMembers: 4,
@@ -1638,32 +1067,12 @@ export const useGameStore = create<GameState>()(
         set({ activeParty: null });
       },
       
-      inviteToParty: (playerName: string) => {
-        // Mock implementation - in a real app, this would send an invitation
-        return true;
-      },
-      
-      kickFromParty: (playerId: string) => {
-        const { activeParty, activeCharacter, isAuthenticated } = get();
-        if (!activeParty || !activeCharacter || activeParty.leaderId !== activeCharacter.id || !isAuthenticated) return;
-        
-        set((state: GameState) => ({
-          activeParty: {
-            ...activeParty,
-            members: activeParty.members.filter(member => member.id !== playerId)
-          }
-        }));
-      },
-      
-      // Friend Functions
+      // Friend management
       addFriend: (playerName: string) => {
-        const { isAuthenticated } = get();
-        if (!isAuthenticated) {
-          get().addNotification('Please log in to add friends', 'error');
-          return false;
-        }
+        const state = get();
+        if (!state.activeCharacter) return false;
         
-        // Mock implementation - in a real app, this would send a friend request
+        // Mock friend addition
         const newFriend: Friend = {
           id: Date.now().toString(),
           name: playerName,
@@ -1673,1181 +1082,369 @@ export const useGameStore = create<GameState>()(
           lastSeen: Date.now()
         };
         
-        set((state: GameState) => ({
-          friendsList: [...state.friendsList, newFriend],
-          onlineFriends: [...state.onlineFriends, newFriend.id]
+        set(state => ({
+          friendsList: [...state.friendsList, newFriend]
         }));
         
         return true;
       },
       
       removeFriend: (friendId: string) => {
-        const { isAuthenticated } = get();
-        if (!isAuthenticated) return;
-        
-        set((state: GameState) => ({
-          friendsList: state.friendsList.filter(friend => friend.id !== friendId),
-          onlineFriends: state.onlineFriends.filter(id => id !== friendId)
+        set(state => ({
+          friendsList: state.friendsList.filter(f => f.id !== friendId)
         }));
       },
       
-      sendQuickMessage: (friendId: string, message: string) => {
-        // Mock implementation - in a real app, this would send a message to the friend
-      },
-      
-      // Guild Functions
-      createGuild: (name: string, description: string, tag: string) => {
-        const { activeCharacter, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) return;
-        
-        const newGuild: Guild = {
-          id: Date.now().toString(),
-          name,
-          clanTag: tag,
-          description,
-          members: [{
-            id: activeCharacter.id,
-            rank: 'Leader',
-            joinedAt: Date.now()
-          }],
-          createdAt: Date.now(),
-          level: 1
-        };
-        
-        set((state: GameState) => ({
-          guilds: [...state.guilds, newGuild],
-          characters: state.characters.map((c: Character) =>
-            c.id === activeCharacter.id ? { ...c, guildId: newGuild.id } : c
-          ),
-          activeCharacter: { ...activeCharacter, guildId: newGuild.id }
+      // Kingdom management
+      claimTerritory: (territoryId: string, guildId: string) => {
+        set(state => ({
+          territories: state.territories.map(territory =>
+            territory.id === territoryId
+              ? { ...territory, controllingGuild: guildId }
+              : territory
+          )
         }));
         
-        // Auto-create and join guild chat
-        get().createGuildChat(newGuild);
+        // Check if this unlocks the Royal Spire
+        get().checkRoyalSpireUnlock();
       },
       
-      joinGuild: (guildId: string) => {
-        const { activeCharacter, guilds, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) return;
+      checkRoyalSpireUnlock: () => {
+        const state = get();
         
-        const guild = guilds.find(g => g.id === guildId);
-        if (!guild) return;
+        // Check if any guild controls all claimable territories (excluding water and royal spire)
+        const claimableTerritories = state.territories.filter(t => t.isClaimable !== false && !t.isRoyalSpire);
+        const guildTerritoryCount: Record<string, number> = {};
         
-        set((state: GameState) => ({
-          guilds: state.guilds.map(g => 
-            g.id === guildId 
-              ? { 
-                  ...g, 
-                  members: [...g.members, {
-                    id: activeCharacter.id,
-                    rank: 'Member',
-                    joinedAt: Date.now()
-                  }]
-                }
-              : g
-          ),
-          characters: state.characters.map((c: Character) =>
-            c.id === activeCharacter.id ? { ...c, guildId } : c
-          ),
-          activeCharacter: { ...activeCharacter, guildId }
-        }));
-        
-        // Auto-join guild chat
-        get().autoJoinGuildChat(guildId);
-      },
-      
-      leaveGuild: () => {
-        const { activeCharacter, guilds, isAuthenticated } = get();
-        if (!activeCharacter || !activeCharacter.guildId || !isAuthenticated) return;
-        
-        const guild = guilds.find(g => g.id === activeCharacter.guildId);
-        if (!guild) return;
-        
-        // Remove royal role and buffs if any
-        if (activeCharacter.guildRole && activeCharacter.guildRole !== 'Member') {
-          get().removeGuildRole(activeCharacter.guildId, activeCharacter.id);
-        }
-        
-        // Leave guild chat
-        get().leaveGuildChat(activeCharacter.guildId);
-        
-        set((state: GameState) => ({
-          guilds: state.guilds.map(g => 
-            g.id === activeCharacter.guildId 
-              ? { 
-                  ...g, 
-                  members: g.members.filter(m => m.id !== activeCharacter.id)
-                }
-              : g
-          ),
-          characters: state.characters.map((c: Character) =>
-            c.id === activeCharacter.id ? { ...c, guildId: undefined, guildRole: undefined } : c
-          ),
-          activeCharacter: { ...activeCharacter, guildId: undefined, guildRole: undefined }
-        }));
-      },
-      
-      // Guild Chat Functions
-      createGuildChat: (guild: Guild) => {
-        const guildChatLobby: ChatLobby = {
-          id: `guild_${guild.id}`,
-          name: `[${guild.clanTag}] ${guild.name}`,
-          description: `Private chat for ${guild.name} guild members`,
-          type: 'guild',
-          createdAt: Date.now(),
-          members: guild.members.map(m => m.id),
-          messages: [],
-          isPrivate: true
-        };
-        
-        set((state: GameState) => ({
-          chatLobbies: [...state.chatLobbies, guildChatLobby]
-        }));
-      },
-      
-      autoJoinGuildChat: (guildId: string) => {
-        const { guilds, activeCharacter, chatLobbies, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) return;
-        
-        const guild = guilds.find(g => g.id === guildId);
-        if (!guild) return;
-        
-        const guildChatId = `guild_${guildId}`;
-        const existingGuildChat = chatLobbies.find(lobby => lobby.id === guildChatId);
-        
-        if (!existingGuildChat) {
-          // Create guild chat if it doesn't exist
-          get().createGuildChat(guild);
-        } else {
-          // Add user to existing guild chat if not already a member
-          if (!existingGuildChat.members.includes(activeCharacter.id)) {
-            set((state: GameState) => ({
-              chatLobbies: state.chatLobbies.map(lobby =>
-                lobby.id === guildChatId
-                  ? { ...lobby, members: [...lobby.members, activeCharacter.id] }
-                  : lobby
-              )
-            }));
+        claimableTerritories.forEach(territory => {
+          if (territory.controllingGuild) {
+            guildTerritoryCount[territory.controllingGuild] = 
+              (guildTerritoryCount[territory.controllingGuild] || 0) + 1;
           }
+        });
+        
+        // Find guild that controls all territories
+        const totalClaimable = claimableTerritories.length;
+        const dominantGuild = Object.entries(guildTerritoryCount).find(
+          ([guildId, count]) => count === totalClaimable
+        );
+        
+        if (dominantGuild && !state.royalSpireUnlocked) {
+          const [guildId] = dominantGuild;
+          
+          // Unlock Royal Spire
+          set(state => ({
+            royalSpireUnlocked: true,
+            territories: state.territories.map(territory =>
+              territory.isRoyalSpire
+                ? { ...territory, isClaimable: true }
+                : territory
+            ),
+            guilds: state.guilds.map(guild =>
+              guild.id === guildId
+                ? { ...guild, isRoyal: true, royalRoles: guild.royalRoles || {} }
+                : { ...guild, isRoyal: false }
+            )
+          }));
+          
+          get().addNotification('🏰 The Royal Spire has emerged! A guild has conquered all territories!', 'success');
         }
       },
       
-      leaveGuildChat: (guildId: string) => {
-        const { activeCharacter, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) return;
+      initiateGuildBattle: (territoryId: string, attackingGuildId: string) => {
+        const state = get();
+        const territory = state.territories.find(t => t.id === territoryId);
+        const attackingGuild = state.guilds.find(g => g.id === attackingGuildId);
+        const defendingGuild = territory?.controllingGuild 
+          ? state.guilds.find(g => g.id === territory.controllingGuild)
+          : null;
         
-        const guildChatId = `guild_${guildId}`;
+        if (!territory || !attackingGuild) return;
         
-        set((state: GameState) => ({
-          chatLobbies: state.chatLobbies.map(lobby =>
-            lobby.id === guildChatId
-              ? { ...lobby, members: lobby.members.filter(id => id !== activeCharacter.id) }
-              : lobby
-          )
-        }));
-      },
-      
-      // Mail Functions
-      sendMail: (recipient: string, subject: string, message: string) => {
-        const { activeCharacter, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) return;
-        
-        const newMail: Mail = {
+        const newBattle: GuildBattle = {
           id: Date.now().toString(),
-          sender: activeCharacter.name,
-          recipient,
-          subject,
-          message,
-          timestamp: Date.now(),
-          isRead: false,
-          isStarred: false
+          territoryId,
+          attackingGuild,
+          defendingGuild,
+          attackers: [],
+          defenders: [],
+          status: 'recruiting',
+          createdAt: Date.now()
         };
         
-        set((state: GameState) => ({
-          mailbox: [...state.mailbox, newMail]
+        set(state => ({
+          guildBattles: [...state.guildBattles, newBattle]
         }));
       },
       
-      markMailAsRead: (mailId: string) => {
-        const { isAuthenticated } = get();
-        if (!isAuthenticated) return;
+      joinGuildBattle: (battleId: string, side: 'attacker' | 'defender') => {
+        const state = get();
+        if (!state.activeCharacter) return;
         
-        set((state: GameState) => ({
-          mailbox: state.mailbox.map(mail =>
-            mail.id === mailId ? { ...mail, isRead: true } : mail
+        set(state => ({
+          guildBattles: state.guildBattles.map(battle =>
+            battle.id === battleId
+              ? {
+                  ...battle,
+                  attackers: side === 'attacker' 
+                    ? [...battle.attackers, state.activeCharacter!.id]
+                    : battle.attackers,
+                  defenders: side === 'defender'
+                    ? [...battle.defenders, state.activeCharacter!.id]
+                    : battle.defenders
+                }
+              : battle
           )
         }));
       },
       
-      deleteMail: (mailId: string) => {
-        const { isAuthenticated } = get();
-        if (!isAuthenticated) return;
-        
-        set((state: GameState) => ({
-          mailbox: state.mailbox.filter(mail => mail.id !== mailId)
-        }));
-      },
-      
-      toggleMailStar: (mailId: string) => {
-        const { isAuthenticated } = get();
-        if (!isAuthenticated) return;
-        
-        set((state: GameState) => ({
-          mailbox: state.mailbox.map(mail =>
-            mail.id === mailId ? { ...mail, isStarred: !mail.isStarred } : mail
+      startGuildBattle: (battleId: string) => {
+        set(state => ({
+          guildBattles: state.guildBattles.map(battle =>
+            battle.id === battleId
+              ? { ...battle, status: 'active' }
+              : battle
           )
         }));
       },
       
-      // Research Functions
+      // Research system
       getAvailableResearch: () => {
-        const { activeCharacter, completedResearch, researchItems, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) return [];
+        const state = get();
+        if (!state.activeCharacter) return [];
         
-        return researchItems.filter(research => {
-          // Check if research is not completed and not active
-          if (completedResearch.some(cr => cr.id === research.id) || 
-              get().activeResearch.some(ar => ar.id === research.id)) {
+        return initialResearch.filter(research => {
+          // Check if already completed
+          if (state.completedResearch.some(cr => cr.id === research.id)) {
             return false;
           }
+          
+          // Check if currently active
+          if (state.activeResearch.some(ar => ar.id === research.id)) {
+            return false;
+          }
+          
           // Check level requirement
-          if (research.requirements.level > activeCharacter.level) {
+          if (research.requirements.level > state.activeCharacter!.level) {
             return false;
           }
+          
           // Check prerequisites
           if (research.requirements.prerequisites) {
-            return research.requirements.prerequisites.every(prereq => 
-              completedResearch.some(cr => cr.id === prereq)
+            const hasAllPrereqs = research.requirements.prerequisites.every(prereq =>
+              state.completedResearch.some(cr => cr.id === prereq)
             );
+            if (!hasAllPrereqs) {
+              return false;
+            }
           }
+          
           return true;
         });
       },
       
       startResearch: (researchId: string) => {
-        const { researchItems, activeCharacter, activeResearch, isAuthenticated } = get();
+        const state = get();
+        if (!state.activeCharacter) return false;
         
-        if (!isAuthenticated) {
-          get().addNotification('Please log in to start research', 'error');
+        const research = initialResearch.find(r => r.id === researchId);
+        if (!research) return false;
+        
+        // Check if research is available
+        const availableResearch = get().getAvailableResearch();
+        if (!availableResearch.some(r => r.id === researchId)) {
           return false;
         }
         
-        const research = researchItems.find(r => r.id === researchId);
-        
-        if (!research || !activeCharacter) {
-          console.error("Invalid research ID or no active character");
-          return false;
-        }
-        
-        // Check if already researching this
-        if (activeResearch.some(r => r.id === researchId)) {
-          console.error("Already researching this topic");
-          return false;
-        }
-        
-        // Check if already completed
-        if (get().completedResearch.some(r => r.id === researchId)) {
-          console.error("Research already completed");
-          return false;
-        }
-        
-        // Check if requirements are met
-        if (research.requirements.level > activeCharacter.level) {
-          console.error(`Character level too low. Need level ${research.requirements.level}`);
-          return false;
-        }
-        
-        if (research.requirements.prerequisites && 
-            !research.requirements.prerequisites.every(prereq => 
-              get().completedResearch.some(cr => cr.id === prereq)
-            )) {
-          console.error("Prerequisites not met");
-          return false;
-        }
-        
-        const now = Date.now();
-        const activeResearchItem = {
+        const activeResearch: Research = {
           ...research,
-          startedAt: now,
-          completedAt: now + research.duration
+          startedAt: Date.now(),
+          completedAt: Date.now() + research.duration
         };
         
-        set((state: GameState) => ({
-          activeResearch: [...state.activeResearch, activeResearchItem]
+        set(state => ({
+          activeResearch: [...state.activeResearch, activeResearch]
         }));
         
         return true;
       },
       
       completeResearch: (researchId: string) => {
-        const { activeResearch, activeCharacter, isAuthenticated } = get();
+        const state = get();
+        if (!state.activeCharacter) return false;
         
-        if (!isAuthenticated) {
-          console.error("Not authenticated");
-          return false;
+        const activeResearch = state.activeResearch.find(r => r.id === researchId);
+        if (!activeResearch || !activeResearch.completedAt) return false;
+        
+        // Check if research is actually completed
+        if (Date.now() < activeResearch.completedAt) return false;
+        
+        // Apply rewards
+        if (activeResearch.rewards.experience) {
+          get().gainExperience(activeResearch.rewards.experience);
         }
         
-        const research = activeResearch.find(r => r.id === researchId);
-        
-        if (!research || !activeCharacter) {
-          console.error("Invalid research ID or no active character");
-          return false;
-        }
-        
-        // Process rewards
-        const rewards = research.rewards || {};
-        
-        // 1. Add experience
-        if (rewards.experience) {
-          get().gainExperience(rewards.experience);
-        }
-        
-        // 2. Apply stat boosts
-        if (rewards.statBoosts) {
-          const updatedStats = { ...activeCharacter.stats };
-          let statsChanged = false;
-          
-          Object.entries(rewards.statBoosts).forEach(([stat, boost]) => {
-            if (stat in updatedStats && boost !== undefined) {
-              updatedStats[stat as keyof typeof updatedStats] += boost;
-              statsChanged = true;
-            }
+        if (activeResearch.rewards.statBoosts) {
+          const currentStats = { ...state.activeCharacter.stats };
+          Object.entries(activeResearch.rewards.statBoosts).forEach(([stat, boost]) => {
+            currentStats[stat as keyof typeof currentStats] += boost;
           });
           
-          if (statsChanged) {
-            set((state: GameState) => ({
-              characters: state.characters.map((c: Character) =>
-                c.id === activeCharacter.id ? { ...c, stats: updatedStats } : c
-              ),
-              activeCharacter: { ...activeCharacter, stats: updatedStats }
-            }));
-          }
-        }
-        
-        // 3. Unlock items and spells
-        if (rewards.unlocks && rewards.unlocks.length > 0) {
-          const unlockedSpells = [...(activeCharacter.unlockedSpells || [])];
-          const unlockedItems = [...(activeCharacter.unlockedItems || [])];
-          
-          rewards.unlocks.forEach(unlock => {
-            if (unlock.startsWith('spell:')) {
-              const spellId = unlock.split(':')[1];
-              if (!unlockedSpells.includes(spellId)) {
-                unlockedSpells.push(spellId);
-              }
-            } else if (unlock.startsWith('item:')) {
-              const itemId = unlock.split(':')[1];
-              if (!unlockedItems.includes(itemId)) {
-                unlockedItems.push(itemId);
-              }
-              
-              // Add the unlocked item to inventory if it's a crafting item
-              const craftingItems = ['crafting_kit', 'artisan_tools'];
-              if (craftingItems.includes(itemId)) {
-                const newItem: Item = {
-                  id: `${itemId}_${Date.now()}`,
-                  name: itemId === 'crafting_kit' ? 'Basic Crafting Kit' : 'Artisan Tools',
-                  description: itemId === 'crafting_kit' 
-                    ? 'A basic set of tools for crafting simple items.' 
-                    : 'Advanced tools for crafting high-quality items.',
-                  type: 'tool',
-                  value: itemId === 'crafting_kit' ? 50 : 200,
-                  icon: itemId === 'crafting_kit' ? '🔨' : '⚒️'
-                };
-                get().addItem(newItem);
-              }
-            }
+          get().updateCharacter(state.activeCharacter.id, {
+            stats: currentStats
           });
-          
-          set((state: GameState) => ({
-            characters: state.characters.map((c: Character) =>
-              c.id === activeCharacter.id ? { 
-                ...c, 
-                unlockedSpells, 
-                unlockedItems 
-              } : c
-            ),
-            activeCharacter: { 
-              ...activeCharacter, 
-              unlockedSpells, 
-              unlockedItems 
-            }
-          }));
-          
-          // Send a mail notification about unlocked items/spells
-          if (rewards.unlocks.length > 0) {
-            const spellUnlocks = rewards.unlocks.filter(u => u.startsWith('spell:')).map(u => u.split(':')[1]);
-            const itemUnlocks = rewards.unlocks.filter(u => u.startsWith('item:')).map(u => u.split(':')[1]);
-            
-            let mailContent = `Your research on ${research.name} has yielded valuable results!\n\n`;
-            
-            if (spellUnlocks.length > 0) {
-              mailContent += "Spells Unlocked:\n";
-              spellUnlocks.forEach(spellId => {
-                const spell = spells.find(s => s.id === spellId);
-                mailContent += `- ${spell ? spell.name : spellId}\n`;
-              });
-              mailContent += "\n";
-            }
-            
-            if (itemUnlocks.length > 0) {
-              mailContent += "Items Unlocked:\n";
-              itemUnlocks.forEach(itemId => {
-                mailContent += `- ${itemId === 'crafting_kit' ? 'Basic Crafting Kit' : 'Artisan Tools'}\n`;
-              });
-            }
-            
-            const researchMail: Mail = {
-              id: Date.now().toString(),
-              sender: "Research Assistant",
-              recipient: activeCharacter.name,
-              subject: `Research Complete: ${research.name}`,
-              message: mailContent,
-              timestamp: Date.now(),
-              isRead: false,
-              isStarred: false
-            };
-            
-            set((state: GameState) => ({
-              mailbox: [...state.mailbox, researchMail]
-            }));
-          }
         }
         
-        // 4. Move research from active to completed
-        set((state: GameState) => ({
+        // Move from active to completed
+        set(state => ({
           activeResearch: state.activeResearch.filter(r => r.id !== researchId),
-          completedResearch: [...state.completedResearch, research]
+          completedResearch: [...state.completedResearch, activeResearch]
         }));
         
         return true;
       },
       
       skipResearchWithDiamonds: (researchId: string) => {
-        const { isAuthenticated } = get();
-        if (!isAuthenticated) return false;
+        const state = get();
+        if (!state.activeCharacter) return false;
         
-        const research = get().activeResearch.find(r => r.id === researchId);
-        if (!research) return false;
+        const activeResearch = state.activeResearch.find(r => r.id === researchId);
+        if (!activeResearch || !activeResearch.completedAt) return false;
         
-        const timeRemaining = research.completedAt! - Date.now();
+        const timeRemaining = activeResearch.completedAt - Date.now();
         const minutesRemaining = Math.ceil(timeRemaining / (1000 * 60));
-       const diamondCost = Math.max(1, Math.floor(minutesRemaining / 5));
+        const diamondCost = Math.max(1, Math.floor(minutesRemaining / 2));
         
-        if (get().diamonds < diamondCost) {
-          return false;
+        if (state.diamonds < diamondCost) return false;
+        
+        // Spend diamonds
+        set(state => ({ diamonds: state.diamonds - diamondCost }));
+        
+        // Complete research immediately
+        return get().completeResearch(researchId);
+      },
+      
+      // Familiar system
+      canSummonFamiliar: (type: string) => {
+        const state = get();
+        if (!state.activeCharacter) {
+          return { canSummon: false, reason: 'No active character', cost: 0 };
         }
         
-        set((state: GameState) => ({
-          diamonds: state.diamonds - diamondCost
-        }));
-        
-        get().completeResearch(researchId);
-        return true;
-      },
-      
-      // PVP Functions
-      joinPvpQueue: () => {
-        const { activeCharacter, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) {
-          get().addNotification('Please log in and select a character to join PVP', 'error');
-          return false;
+        if (state.activeCharacter.familiar) {
+          return { canSummon: false, reason: 'Already have a familiar', cost: 0 };
         }
         
-        set((state: GameState) => ({
-          pvpQueue: [...state.pvpQueue, {
-            playerId: activeCharacter.id,
-            playerName: activeCharacter.name,
-            level: activeCharacter.level,
-            ranking: state.pvpRanking,
-            queueTime: Date.now()
-          }]
-        }));
-        
-        get().addNotification('Joined PVP queue! Searching for opponent...', 'info');
-        
-        // Auto-match with best available opponent after a short delay
-        setTimeout(() => {
-          const currentState = get();
-          const playerInQueue = currentState.pvpQueue.find(p => p.playerId === activeCharacter.id);
-          
-          if (playerInQueue && currentState.pvpQueue.length > 1) {
-            // Find best match based on ranking and level (no level restrictions)
-            const otherPlayers = currentState.pvpQueue.filter(p => p.playerId !== activeCharacter.id);
-            
-            if (otherPlayers.length > 0) {
-              // Sort by ranking difference (closest ranking first)
-              const bestMatch = otherPlayers.sort((a, b) => {
-                const rankDiffA = Math.abs(a.ranking - currentState.pvpRanking);
-                const rankDiffB = Math.abs(b.ranking - currentState.pvpRanking);
-                return rankDiffA - rankDiffB;
-              })[0];
-              
-              get().startPvpMatch(bestMatch.playerId);
-            }
-          }
-        }, 2000); // 2 second delay for matchmaking
-        
-        return true;
-      },
-      
-      leavePvpQueue: () => {
-        const { activeCharacter, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) return;
-        
-        set((state: GameState) => ({
-          pvpQueue: state.pvpQueue.filter(p => p.playerId !== activeCharacter.id)
-        }));
-        
-        get().addNotification('Left PVP queue', 'info');
-      },
-      
-      startPvpMatch: (opponentId: string) => {
-        const { activeCharacter, pvpQueue, isAuthenticated } = get();
-        if (!activeCharacter || !isAuthenticated) return false;
-        
-        const opponent = pvpQueue.find(p => p.playerId === opponentId);
-        if (!opponent) return false;
-        
-        const match = {
-          id: Date.now().toString(),
-          player1: {
-            id: activeCharacter.id,
-            name: activeCharacter.name,
-            level: activeCharacter.level,
-            health: activeCharacter.health.current,
-            maxHealth: activeCharacter.health.max
-          },
-          player2: opponent,
-          startTime: Date.now(),
-          currentTurn: activeCharacter.id,
-          status: 'active' as const
-        };
-        
-        set((state: GameState) => ({
-          activePvpMatch: match,
-          pvpQueue: state.pvpQueue.filter(p => p.playerId !== activeCharacter.id && p.playerId !== opponentId)
-        }));
-        
-        get().addNotification(`PVP match started against ${opponent.playerName}!`, 'success');
-        return true;
-      },
-      
-      endPvpMatch: (winnerId: string) => {
-        const { activePvpMatch, activeCharacter, isAuthenticated } = get();
-        if (!activePvpMatch || !activeCharacter || !isAuthenticated) return;
-        
-        const isWinner = winnerId === activeCharacter.id;
-        const rankingChange = isWinner ? 25 : -15;
-        
-        // PVP rewards are significantly more generous than NPC battles
-        if (isWinner) {
-          const pvpXpReward = 300 + (activeCharacter.level * 15); // Very generous XP (3x NPC base)
-          const pvpGoldReward = 200 + (activeCharacter.level * 20); // Very generous gold (4x NPC base)
-          const pvpDiamondReward = 8 + Math.floor(activeCharacter.level / 5); // Scaling diamond rewards
-          
-          get().gainExperience(pvpXpReward);
-          get().gainGold(pvpGoldReward);
-          get().gainDiamonds(pvpDiamondReward);
-          
-          get().addNotification(`PVP Victory! +${pvpXpReward} XP, +${pvpGoldReward} gold, +${pvpDiamondReward} diamonds, +25 ranking`, 'success');
-        } else {
-          // Small consolation prize for losing
-          const consolationXp = 50 + (activeCharacter.level * 2);
-          const consolationGold = 25 + (activeCharacter.level * 3);
-          
-          get().gainExperience(consolationXp);
-          get().gainGold(consolationGold);
-          
-          get().addNotification(`PVP Defeat! +${consolationXp} XP, +${consolationGold} gold, -15 ranking`, 'error');
+        const familiarType = familiarTypes.find(f => f.type === type);
+        if (!familiarType) {
+          return { canSummon: false, reason: 'Invalid familiar type', cost: 0 };
         }
         
-        set((state: GameState) => ({
-          activePvpMatch: null,
-          pvpRanking: Math.max(0, state.pvpRanking + rankingChange)
-        }));
+        if (state.activeCharacter.level < familiarType.levelRequirement) {
+          return { 
+            canSummon: false, 
+            reason: `Requires level ${familiarType.levelRequirement}`, 
+            cost: familiarType.cost 
+          };
+        }
+        
+        if (state.diamonds < familiarType.cost) {
+          return { 
+            canSummon: false, 
+            reason: `Need ${familiarType.cost} diamonds`, 
+            cost: familiarType.cost 
+          };
+        }
+        
+        return { canSummon: true, reason: '', cost: familiarType.cost };
       },
       
-      // Chat Functions
-      setActiveChannel: (channelId: string) => {
-        const { isAuthenticated } = get();
-        if (!isAuthenticated) return;
+      summonFamiliar: (type: string, name: string) => {
+        const state = get();
+        if (!state.activeCharacter) return false;
         
-        set({ activeChannel: channelId });
-      },
-      
-      addChatMessage: (message: ChatMessage) => {
-        const { activeChannel, isAuthenticated } = get();
-        if (!isAuthenticated) return;
+        const { canSummon, cost } = get().canSummonFamiliar(type);
+        if (!canSummon) return false;
         
-        set((state: GameState) => ({
-          chatLobbies: state.chatLobbies.map((lobby: ChatLobby) => 
-            lobby.id === activeChannel
-              ? { ...lobby, messages: [...lobby.messages, message] }
-              : lobby
-          )
-        }));
-      },
-      
-      createChatLobby: (name: string, description: string, isPrivate: boolean) => {
-        const character = get().activeCharacter;
-        const { isAuthenticated } = get();
+        const familiarType = familiarTypes.find(f => f.type === type);
+        if (!familiarType) return false;
         
-        if (!character || !isAuthenticated) return;
-        
-        const newLobby: ChatLobby = {
+        const newFamiliar: Familiar = {
           id: Date.now().toString(),
           name,
-          description,
-          type: 'user',
-          createdBy: character.id,
-          createdAt: Date.now(),
-          members: [character.id],
-          messages: [],
-          isPrivate
+          type: type as any,
+          level: 1,
+          loyalty: 50,
+          abilities: familiarType.abilities,
+          stats: familiarType.baseStats
         };
         
-        set((state: GameState) => ({
-          chatLobbies: [...state.chatLobbies, newLobby],
-          activeChannel: newLobby.id
-        }));
-      },
-      
-      joinChatLobby: (lobbyId: string) => {
-        const character = get().activeCharacter;
-        const { isAuthenticated } = get();
+        // Spend diamonds
+        set(state => ({ diamonds: state.diamonds - cost }));
         
-        if (!character || !isAuthenticated) return;
+        // Add familiar to character
+        get().updateCharacter(state.activeCharacter.id, {
+          familiar: newFamiliar
+        });
         
-        set((state: GameState) => ({
-          chatLobbies: state.chatLobbies.map((lobby: ChatLobby) =>
-            lobby.id === lobbyId
-              ? { ...lobby, members: [...lobby.members, character.id] }
-              : lobby
-          ),
-          activeChannel: lobbyId
-        }));
-      },
-      
-      leaveChatLobby: (lobbyId: string) => {
-        const character = get().activeCharacter;
-        const { isAuthenticated } = get();
-        
-        if (!character || !isAuthenticated) return;
-        
-        set((state: GameState) => ({
-          chatLobbies: state.chatLobbies.map((lobby: ChatLobby) =>
-            lobby.id === lobbyId
-              ? { ...lobby, members: lobby.members.filter((id: string) => id !== character.id) }
-              : lobby
-          ),
-          activeChannel: 'general'
-        }));
-      },
-      
-      cleanupEmptyLobbies: () => {
-        set((state: GameState) => ({
-          chatLobbies: state.chatLobbies.filter((lobby: ChatLobby) => 
-            lobby.type === 'default' || lobby.members.length > 0
-          )
-        }));
-      },
-      
-      addReactionToMessage: (messageId: string, emoji: string) => {
-        const character = get().activeCharacter;
-        const { isAuthenticated } = get();
-        
-        if (!character || !isAuthenticated) return;
-        
-        set((state: GameState) => ({
-          chatLobbies: state.chatLobbies.map((lobby: ChatLobby) => ({
-            ...lobby,
-            messages: lobby.messages.map((msg: ChatMessage) => {
-              if (msg.id === messageId) {
-                const reactions = msg.reactions || [];
-                const reaction = reactions.find((r) => r.emoji === emoji);
-                if (reaction) {
-                  if (reaction.users.includes(character.id)) {
-                    return {
-                      ...msg,
-                      reactions: reactions.map((r) =>
-                        r.emoji === emoji
-                          ? {
-                              ...r,
-                              count: r.count - 1,
-                              users: r.users.filter((id: string) => id !== character.id)
-                            }
-                          : r
-                      ).filter((r) => r.count > 0)
-                    };
-                  }
-                  return {
-                    ...msg,
-                    reactions: reactions.map((r) =>
-                      r.emoji === emoji
-                        ? {
-                            ...r,
-                            count: r.count + 1,
-                            users: [...r.users, character.id]
-                          }
-                        : r
-                    )
-                  };
-                }
-                return {
-                  ...msg,
-                  reactions: [
-                    ...reactions,
-                    { emoji, count: 1, users: [character.id] }
-                  ]
-                };
-              }
-              return msg;
-            })
-          }))
-        }));
-      },
-      
-      kickFromChat: (userId: string, lobbyId: string) => {
-        // Implementation for kicking a user from a chat lobby
-      },
-      
-      banUser: (userId: string, reason: string) => {
-        const { userRole, isAuthenticated } = get();
-        if (!isAuthenticated || userRole !== 'admin') return;
-        
-        set((state: GameState) => ({
-          bannedUsers: [...state.bannedUsers, userId]
-        }));
-        
-        get().addNotification(`User ${userId} has been banned: ${reason}`, 'success');
-      },
-      
-      unbanUser: (userId: string) => {
-        const { userRole, isAuthenticated } = get();
-        if (!isAuthenticated || userRole !== 'admin') return;
-        
-        set((state: GameState) => ({
-          bannedUsers: state.bannedUsers.filter(id => id !== userId)
-        }));
-        
-        get().addNotification(`User ${userId} has been unbanned`, 'success');
-      },
-      
-      // Chat Pop-out Functions
-      setChatPopout: (isPopout: boolean) => {
-        set({ chatPopout: isPopout });
-      },
-
-      // Real-time Chat Functions
-      connectToChat: (userId: string, userName: string) => {
-        const { isAuthenticated } = get();
-        if (!isAuthenticated) return;
-        
-        // Add user to online users list
-        set((state: GameState) => ({
-          onlineUsers: [
-            ...state.onlineUsers.filter(user => user.id !== userId),
-            {
-              id: userId,
-              name: userName,
-              isOnline: true,
-              channelId: state.activeChannel,
-              lastSeen: Date.now()
-            }
-          ]
-        }));
-      },
-
-      disconnectFromChat: (userId: string) => {
-        // Remove user from online users list
-        set((state: GameState) => ({
-          onlineUsers: state.onlineUsers.filter(user => user.id !== userId)
-        }));
-      },
-
-      updateUserPresence: (userId: string, isOnline: boolean, channelId?: string) => {
-        set((state: GameState) => ({
-          onlineUsers: state.onlineUsers.map(user =>
-            user.id === userId
-              ? {
-                  ...user,
-                  isOnline,
-                  channelId: channelId || user.channelId,
-                  lastSeen: Date.now()
-                }
-              : user
-          )
-        }));
-      },
-      
-      // Admin Functions
-      createEnemy: (enemyData: EnemyEditorData) => {
-        const { userRole, isAuthenticated } = get();
-        if (!isAuthenticated || userRole !== 'admin') {
-          get().addNotification('Admin access required', 'error');
-          return false;
-        }
-        
-        const newEnemy: Enemy = {
-          id: enemyData.id || `custom_${Date.now()}`,
-          name: enemyData.name,
-          description: enemyData.description,
-          level: enemyData.level,
-          requiredLevel: enemyData.requiredLevel,
-          health: { max: enemyData.maxHealth },
-          maxHealth: enemyData.maxHealth,
-          currentHealth: enemyData.maxHealth,
-          attack: enemyData.attack,
-          defense: enemyData.defense,
-          experience: enemyData.experience,
-          gold: enemyData.gold,
-          difficulty: enemyData.difficulty,
-          stats: enemyData.stats,
-          armorClass: enemyData.armorClass,
-          damageDie: enemyData.damageDie,
-          attacks: enemyData.attacks,
-          abilities: enemyData.abilities,
-          weaknesses: enemyData.weaknesses,
-          resistances: enemyData.resistances,
-          profileImage: enemyData.profileImage,
-          environment: enemyData.environment,
-          lore: enemyData.lore,
-          loot: {
-            experience: enemyData.experience,
-            gold: { min: Math.floor(enemyData.gold * 0.8), max: Math.floor(enemyData.gold * 1.2) },
-            items: []
-          }
-        };
-        
-        set((state: GameState) => ({
-          customEnemies: [...state.customEnemies, newEnemy]
-        }));
-        
-        get().addNotification(`Enemy "${enemyData.name}" created successfully!`, 'success');
+        get().addNotification(`${name} has been summoned as your faithful companion!`, 'success');
         return true;
       },
       
-      updateEnemy: (enemyId: string, enemyData: EnemyEditorData) => {
-        const { userRole, isAuthenticated } = get();
-        if (!isAuthenticated || userRole !== 'admin') {
-          get().addNotification('Admin access required', 'error');
-          return false;
-        }
+      dismissFamiliar: () => {
+        const state = get();
+        if (!state.activeCharacter || !state.activeCharacter.familiar) return;
         
-        set((state: GameState) => ({
-          customEnemies: state.customEnemies.map(enemy =>
-            enemy.id === enemyId
-              ? {
-                  ...enemy,
-                  name: enemyData.name,
-                  description: enemyData.description,
-                  level: enemyData.level,
-                  requiredLevel: enemyData.requiredLevel,
-                  maxHealth: enemyData.maxHealth,
-                  currentHealth: enemyData.maxHealth,
-                  health: { max: enemyData.maxHealth },
-                  attack: enemyData.attack,
-                  defense: enemyData.defense,
-                  experience: enemyData.experience,
-                  gold: enemyData.gold,
-                  difficulty: enemyData.difficulty,
-                  stats: enemyData.stats,
-                  armorClass: enemyData.armorClass,
-                  damageDie: enemyData.damageDie,
-                  attacks: enemyData.attacks,
-                  abilities: enemyData.abilities,
-                  weaknesses: enemyData.weaknesses,
-                  resistances: enemyData.resistances,
-                  profileImage: enemyData.profileImage,
-                  environment: enemyData.environment,
-                  lore: enemyData.lore,
-                  loot: {
-                    experience: enemyData.experience,
-                    gold: { min: Math.floor(enemyData.gold * 0.8), max: Math.floor(enemyData.gold * 1.2) },
-                    items: enemy.loot.items || []
-                  }
-                }
-              : enemy
-          )
-        }));
+        get().updateCharacter(state.activeCharacter.id, {
+          familiar: undefined
+        });
         
-        get().addNotification(`Enemy "${enemyData.name}" updated successfully!`, 'success');
-        return true;
+        get().addNotification('Your familiar has been dismissed.', 'info');
       },
       
-      deleteEnemy: (enemyId: string) => {
-        const { userRole, isAuthenticated } = get();
-        if (!isAuthenticated || userRole !== 'admin') {
-          get().addNotification('Admin access required', 'error');
-          return false;
-        }
-        
-        const enemy = get().customEnemies.find(e => e.id === enemyId);
-        if (!enemy) {
-          get().addNotification('Enemy not found', 'error');
-          return false;
-        }
-        
-        set((state: GameState) => ({
-          customEnemies: state.customEnemies.filter(e => e.id !== enemyId)
-        }));
-        
-        get().addNotification(`Enemy "${enemy.name}" deleted successfully!`, 'success');
-        return true;
-      },
-      
-      uploadEnemyImage: (enemyId: string, imageUrl: string) => {
-        const { userRole, isAuthenticated } = get();
-        if (!isAuthenticated || userRole !== 'admin') {
-          get().addNotification('Admin access required', 'error');
-          return false;
-        }
-        
-        set((state: GameState) => ({
-          customEnemies: state.customEnemies.map(enemy =>
-            enemy.id === enemyId
-              ? { ...enemy, profileImage: imageUrl }
-              : enemy
-          )
-        }));
-        
-        get().addNotification('Enemy image updated successfully!', 'success');
-        return true;
-      },
-      
-      getAllEnemiesForAdmin: () => {
-        const { userRole, isAuthenticated } = get();
-        if (!isAuthenticated || userRole !== 'admin') return [];
-        
-        return [...getAllEnemies(), ...get().customEnemies];
-      },
-      
-      setUserRole: (username: string, role: 'player' | 'moderator' | 'admin') => {
-        const { userRole, isAuthenticated } = get();
-        if (!isAuthenticated || userRole !== 'admin') return;
-        
-        // In a real app, this would update the user's role in the database
-        get().addNotification(`User ${username} role updated to ${role}`, 'success');
-      },
-      
-      addNotification: (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+      // Notifications
+      addNotification: (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
         const notification = {
           id: Date.now().toString(),
           message,
           type,
           timestamp: Date.now()
         };
-        set((state: GameState) => ({
+        
+        set(state => ({
           notifications: [...state.notifications, notification]
         }));
         
-        // Auto-remove after 3 seconds
+        // Auto-remove after 5 seconds
         setTimeout(() => {
-          set((state: GameState) => ({
-            notifications: state.notifications.filter(n => n.id !== notification.id)
-          }));
-        }, 3000);
+          get().removeNotification(notification.id);
+        }, 5000);
       },
       
       removeNotification: (id: string) => {
-        set((state: GameState) => ({
+        set(state => ({
           notifications: state.notifications.filter(n => n.id !== id)
         }));
       },
       
-      // Admin Functions
-      logout: () => {
-        // Clear session data but keep persistent character data
-        set((state: GameState) => ({
-          // Keep character data persistent
-          characters: state.characters,
-          diamonds: state.diamonds,
-          guilds: state.guilds,
-          completedResearch: state.completedResearch,
-          activeResearch: state.activeResearch,
-          pvpRanking: state.pvpRanking,
-          mailbox: state.mailbox,
-          username: state.username, // Keep username for next login
-          customEnemies: state.customEnemies, // Keep custom enemies
-          bannedUsers: state.bannedUsers, // Keep banned users
-          
-          // Clear session-only data
-          isAuthenticated: false,
-          activeCharacter: null,
-          userRole: 'player',
-          activeChannel: 'general',
-          activeParty: null,
-          chatPopout: false,
-          selectedOpponent: null,
-          pvpQueue: [],
-          activePvpMatch: null,
-          onlineUsers: [],
-          guildBattles: [],
-          activeGuildBattle: null,
-          notifications: [],
-          friendsList: [],
-          onlineFriends: [],
-          
-          // Reset non-persisted data to initial state
-          territories: initialTerritories,
-          royalSpireUnlocked: false,
-          researchItems: initialResearch,
-          shopItems: shopItems.map((item: ShopItem) => ({ ...item, stock: item.stock || 10 })),
-          chatLobbies: [
-            {
-              id: 'general',
-              name: 'General',
-              description: 'Kingdom Chat',
-              type: 'default',
-              createdAt: Date.now(),
-              members: [],
-              messages: [],
-              isPrivate: false
-            },
-            {
-              id: 'help',
-              name: 'Help',
-              description: 'Get help from other players',
-              type: 'default',
-              createdAt: Date.now(),
-              members: [],
-              messages: [],
-              isPrivate: false
-            },
-            {
-              id: 'trading',
-              name: 'Trading',
-              description: 'Buy and sell items with other players',
-              type: 'default',
-              createdAt: Date.now(),
-              members: [],
-              messages: [],
-              isPrivate: false
-            },
-            {
-              id: 'guild-recruitment',
-              name: 'Guild Recruitment',
-              description: 'Find or advertise guilds',
-              type: 'default',
-              createdAt: Date.now(),
-              members: [],
-              messages: [],
-              isPrivate: false
-            }
-          ],
-          availableEnemies: []
-        }));
+      clearNotifications: () => {
+        set({ notifications: [] });
       }
     }),
     {
-      name: 'echoes-of-elders-storage',
+      name: 'game-storage',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
-        // Authentication - persist username but not auth status
-        username: state.username,
-        
-        // Complete Character Management - ALWAYS PERSIST
+        isAuthenticated: state.isAuthenticated,
+        userRole: state.userRole,
         characters: state.characters,
-        
-        // Currency - ALWAYS PERSIST
+        activeCharacter: state.activeCharacter,
         diamonds: state.diamonds,
-        
-        // Guild Data - ALWAYS PERSIST
         guilds: state.guilds,
-        
-        // Research progress - ALWAYS PERSIST
+        territories: state.territories,
         completedResearch: state.completedResearch,
-        activeResearch: state.activeResearch,
-        
-        // PVP State - ALWAYS PERSIST
-        pvpRanking: state.pvpRanking,
-        
-        // Mail System - ALWAYS PERSIST
-        mailbox: state.mailbox,
-        
-        // Admin Data - ALWAYS PERSIST
-        customEnemies: state.customEnemies,
-        bannedUsers: state.bannedUsers
-      }),
-      
-      onRehydrateStorage: () => (state, error) => {
-        if (error) {
-          console.error('Failed to rehydrate storage:', error);
-        } else if (state) {
-          console.log('Storage rehydrated successfully');
-          
-          // Initialize non-persisted state
-          state.territories = initialTerritories;
-          state.royalSpireUnlocked = false;
-          state.researchItems = initialResearch;
-          state.shopItems = shopItems.map((item: ShopItem) => ({ ...item, stock: item.stock || 10 }));
-          state.chatLobbies = [
-            {
-              id: 'general',
-              name: 'General',
-              description: 'Kingdom Chat',
-              type: 'default',
-              createdAt: Date.now(),
-              members: [],
-              messages: [],
-              isPrivate: false
-            },
-            {
-              id: 'help',
-              name: 'Help',
-              description: 'Get help from other players',
-              type: 'default',
-              createdAt: Date.now(),
-              members: [],
-              messages: [],
-              isPrivate: false
-            },
-            {
-              id: 'trading',
-              name: 'Trading',
-              description: 'Buy and sell items with other players',
-              type: 'default',
-              createdAt: Date.now(),
-              members: [],
-              messages: [],
-              isPrivate: false
-            },
-            {
-              id: 'guild-recruitment',
-              name: 'Guild Recruitment',
-              description: 'Find or advertise guilds',
-              type: 'default',
-              createdAt: Date.now(),
-              members: [],
-              messages: [],
-              isPrivate: false
-            }
-          ];
-          state.activeChannel = 'general';
-          state.chatPopout = false;
-          state.onlineUsers = [];
-          state.availableEnemies = [];
-          state.selectedOpponent = null;
-          state.pvpQueue = [];
-          state.activePvpMatch = null;
-          state.guildBattles = [];
-          state.activeGuildBattle = null;
-          state.notifications = [];
-          state.activeParty = null;
-          state.friendsList = [];
-          state.onlineFriends = [];
-          state.userRole = 'player';
-          
-          // Initialize admin data if not present
-          if (!state.customEnemies) state.customEnemies = [];
-          if (!state.bannedUsers) state.bannedUsers = [];
-          
-          // IMPORTANT: Don't auto-authenticate but keep username for login convenience
-          state.isAuthenticated = false;
-          state.activeCharacter = null;
-        }
-      }
+        royalSpireUnlocked: state.royalSpireUnlocked
+      })
     }
   )
 );
