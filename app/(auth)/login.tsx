@@ -35,7 +35,12 @@ export default function LoginScreen() {
     
     // Simulate API call
     setTimeout(() => {
-      login(username);
+      const success = login(username, password);
+      if (success) {
+        // Login successful, navigation will be handled by useEffect
+      } else {
+        Alert.alert('Error', 'Invalid username or password');
+      }
       setIsLoading(false);
     }, 1000);
   };

@@ -1,11 +1,19 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import colors from '@/constants/colors';
+import { useGameStore } from '@/hooks/useGameStore';
 
 export default function WelcomeScreen() {
   const router = useRouter();
+  const { isAuthenticated } = useGameStore();
+  
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace('/(tabs)');
+    }
+  }, [isAuthenticated, router]);
   
   return (
     <ImageBackground

@@ -23,6 +23,7 @@ import { familiarTypes } from '@/constants/gameData';
 interface GameState {
   // Authentication
   isAuthenticated: boolean;
+  username: string;
   userRole: 'player' | 'admin';
   
   // Characters
@@ -391,6 +392,7 @@ export const useGameStore = create<GameState>()(
     (set, get) => ({
       // Initial state
       isAuthenticated: false,
+      username: '',
       userRole: 'player',
       characters: [],
       activeCharacter: null,
@@ -438,6 +440,7 @@ export const useGameStore = create<GameState>()(
         if (username && password) {
           set({ 
             isAuthenticated: true,
+            username: username,
             userRole: username === 'admin' ? 'admin' : 'player'
           });
           
@@ -459,7 +462,8 @@ export const useGameStore = create<GameState>()(
       
       logout: () => {
         set({ 
-          isAuthenticated: false, 
+          isAuthenticated: false,
+          username: '',
           activeCharacter: null,
           userRole: 'player'
         });
@@ -470,6 +474,7 @@ export const useGameStore = create<GameState>()(
         if (username && email && password) {
           set({ 
             isAuthenticated: true,
+            username: username,
             userRole: 'player'
           });
           get().addNotification(`Welcome to Echoes of Elders, ${username}!`, 'success');

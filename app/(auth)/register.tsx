@@ -12,7 +12,7 @@ export default function RegisterScreen() {
   const [isLoading, setIsLoading] = useState(false);
   
   const router = useRouter();
-  const { login } = useGameStore();
+  const { register } = useGameStore();
   
   const handleRegister = () => {
     if (!username.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
@@ -34,9 +34,14 @@ export default function RegisterScreen() {
     
     // Simulate API call
     setTimeout(() => {
-      login(username);
+      const success = register(username, email, password);
+      if (success) {
+        Alert.alert('Success', 'Account created successfully!');
+        router.replace('/(tabs)');
+      } else {
+        Alert.alert('Error', 'Failed to create account. Please try again.');
+      }
       setIsLoading(false);
-      Alert.alert('Success', 'Account created successfully!');
     }, 1000);
   };
   
