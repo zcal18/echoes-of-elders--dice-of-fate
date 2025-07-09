@@ -5,7 +5,7 @@ import colors from '@/constants/colors';
 import { useGameStore } from '@/hooks/useGameStore';
 import { enhancedAttackRoll, enemyAttackRoll, damageRoll, calculateModifier, rollDice } from '@/utils/diceRolls';
 import { getAllEnemies } from '@/constants/enemies';
-import { Sword, Shield, Zap, Heart, Package, X } from 'lucide-react-native';
+import { Sword, Shield, Zap, Heart, Package, X, FastForward } from 'lucide-react-native';
 
 type AttackType = 'melee' | 'magic' | 'special';
 type SpecialMove = 'charge' | 'heal' | 'defend' | 'poison' | 'confuse';
@@ -345,6 +345,35 @@ export default function CombatSystem() {
     setPlayerTurn(true);
   };
   
+  const forceAdvanceEnemyTurn = () => {
+    if (!selectedEnemy || !inCombat) return;
+    
+    Alert.alert(
+      'Force Advance Turn',
+      'This will force the enemy to take their turn immediately. Use this if the game seems stuck.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Advance', 
+          style: 'destructive',
+          onPress: () => {
+            setCombatLog(prev => [`⚡ Turn advanced manually!`, ...prev]);
+            setWaitingForEnemyTurn(false);
+            
+            if (!playerTurn) {
+              // If it's enemy turn, force them to attack
+              performEnemyAttack(selectedEnemy);
+            } else {
+              // If it's player turn but something is stuck, just ensure it's player turn
+              setPlayerTurn(true);
+              setWaitingForEnemyTurn(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+  
   const handleVictory = () => {
     if (!selectedEnemy) return;
     
@@ -601,6 +630,19 @@ export default function CombatSystem() {
             <Text style={styles.actionButtonText}>🏃 Flee</Text>
           </TouchableOpacity>
         </View>
+        
+        {/* Gold Advance Button - Only show when not player turn or when waiting */}
+        {(!playerTurn || waitingForEnemyTurn) && (
+          <View style={styles.advanceButtonContainer}>
+            <TouchableOpacity 
+              style={styles.goldAdvanceButton}
+              onPress={forceAdvanceEnemyTurn}
+            >
+              <FastForward size={16} color="#000" />
+              <Text style={styles.goldAdvanceButtonText}>Force Advance Turn</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         
         {!playerTurn && !waitingForEnemyTurn && (
           <Text style={styles.turnIndicator}>Enemy's Turn...</Text>
@@ -997,6 +1039,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: colors.text,
+  },
+  advanceButtonContainer: {
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  goldAdvanceButton: {
+    backgroundColor: '#FFD700',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  goldAdvanceButtonText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#000',
   },
   turnIndicator: {
     fontSize: 14,
