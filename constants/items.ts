@@ -12,8 +12,7 @@ export const startingItems: Item[] = [
       { type: 'heal', value: 25 }
     ],
     stackable: true,
-    quantity: 3,
-    effectValue: 25
+    quantity: 3
   },
   {
     id: 'mana_potion',
@@ -26,10 +25,11 @@ export const startingItems: Item[] = [
       { type: 'heal', value: 20 }
     ],
     stackable: true,
-    quantity: 2,
-    effectValue: 20
+    quantity: 2
   }
 ];
+
+export const initialItems = startingItems;
 
 export const items: Item[] = [
   ...startingItems,
@@ -44,8 +44,7 @@ export const items: Item[] = [
     stats: {
       attack: 8,
       strength: 2
-    },
-    bonus: 2
+    }
   },
   {
     id: 'leather_armor',
@@ -96,8 +95,7 @@ export const items: Item[] = [
     stats: {
       attack: 4,
       intelligence: 3
-    },
-    bonus: 3
+    }
   },
   {
     id: 'greater_health_potion',
@@ -110,8 +108,7 @@ export const items: Item[] = [
       { type: 'heal', value: 50 }
     ],
     stackable: true,
-    quantity: 1,
-    effectValue: 50
+    quantity: 1
   },
   {
     id: 'greater_mana_potion',
@@ -124,8 +121,7 @@ export const items: Item[] = [
       { type: 'heal', value: 40 }
     ],
     stackable: true,
-    quantity: 1,
-    effectValue: 40
+    quantity: 1
   },
   {
     id: 'revive_potion',
@@ -138,8 +134,7 @@ export const items: Item[] = [
       { type: 'heal', value: 0 }
     ],
     stackable: true,
-    quantity: 1,
-    effectValue: 0
+    quantity: 1
   },
   {
     id: 'strength_elixir',
@@ -152,8 +147,7 @@ export const items: Item[] = [
       { type: 'buff', value: 5, duration: 300 }
     ],
     stackable: true,
-    quantity: 1,
-    effectValue: 5
+    quantity: 1
   }
 ];
 
@@ -171,8 +165,7 @@ export const shopItems: ShopItem[] = [
       stats: {
         attack: 8,
         strength: 2
-      },
-      bonus: 2
+      }
     },
     price: 150,
     stock: 5,
@@ -251,8 +244,7 @@ export const shopItems: ShopItem[] = [
       stats: {
         attack: 4,
         intelligence: 3
-      },
-      bonus: 3
+      }
     },
     price: 300,
     stock: 2,
@@ -272,8 +264,7 @@ export const shopItems: ShopItem[] = [
         { type: 'heal', value: 50 }
       ],
       stackable: true,
-      quantity: 1,
-      effectValue: 50
+      quantity: 1
     },
     price: 100,
     stock: 10,
@@ -293,8 +284,7 @@ export const shopItems: ShopItem[] = [
         { type: 'heal', value: 40 }
       ],
       stackable: true,
-      quantity: 1,
-      effectValue: 40
+      quantity: 1
     },
     price: 110,
     stock: 8,
@@ -314,8 +304,7 @@ export const shopItems: ShopItem[] = [
         { type: 'heal', value: 0 }
       ],
       stackable: true,
-      quantity: 1,
-      effectValue: 0
+      quantity: 1
     },
     price: 300,
     stock: 5,
@@ -335,8 +324,7 @@ export const shopItems: ShopItem[] = [
         { type: 'buff', value: 5, duration: 300 }
       ],
       stackable: true,
-      quantity: 1,
-      effectValue: 5
+      quantity: 1
     },
     price: 200,
     stock: 3,

@@ -17,7 +17,7 @@ import {
   GuildRole,
   Familiar
 } from '@/types/game';
-import { initialItems } from '@/constants/items';
+import { startingItems } from '@/constants/items';
 import { familiarTypes } from '@/constants/gameData';
 
 interface GameState {
@@ -68,7 +68,7 @@ interface GameState {
   register: (username: string, email: string, password: string) => boolean;
   
   // Character management
-  createCharacter: (character: Omit<Character, 'id' | 'createdAt'>) => void;
+  createCharacter: (character: Omit<Character, 'id'>) => void;
   setActiveCharacter: (characterId: string) => void;
   updateCharacter: (characterId: string, updates: Partial<Character>) => void;
   deleteCharacter: (characterId: string) => void;
@@ -240,7 +240,8 @@ const initialResearch: Research[] = [
         strength: 2,
         dexterity: 1
       }
-    }
+    },
+    isCompleted: false
   },
   {
     id: 'elemental_magic',
@@ -259,7 +260,8 @@ const initialResearch: Research[] = [
         wisdom: 1
       },
       unlocks: ['spell:fireball', 'spell:ice_shard']
-    }
+    },
+    isCompleted: false
   },
   {
     id: 'basic_crafting',
@@ -278,7 +280,8 @@ const initialResearch: Research[] = [
         intelligence: 1
       },
       unlocks: ['item:basic_sword', 'item:leather_armor']
-    }
+    },
+    isCompleted: false
   },
   {
     id: 'advanced_combat',
@@ -297,7 +300,8 @@ const initialResearch: Research[] = [
         dexterity: 2,
         constitution: 1
       }
-    }
+    },
+    isCompleted: false
   },
   {
     id: 'arcane_rituals',
@@ -317,7 +321,8 @@ const initialResearch: Research[] = [
         charisma: 1
       },
       unlocks: ['spell:teleport', 'spell:summon_familiar']
-    }
+    },
+    isCompleted: false
   },
   {
     id: 'advanced_crafting',
@@ -337,7 +342,8 @@ const initialResearch: Research[] = [
         wisdom: 1
       },
       unlocks: ['item:enchanted_blade', 'item:mage_robes']
-    }
+    },
+    isCompleted: false
   },
   {
     id: 'defensive_tactics',
@@ -355,7 +361,8 @@ const initialResearch: Research[] = [
         constitution: 3,
         wisdom: 1
       }
-    }
+    },
+    isCompleted: false
   },
   {
     id: 'healing_arts',
@@ -374,7 +381,8 @@ const initialResearch: Research[] = [
         charisma: 1
       },
       unlocks: ['spell:heal', 'spell:cure_poison']
-    }
+    },
+    isCompleted: false
   }
 ];
 
@@ -394,7 +402,8 @@ export const useGameStore = create<GameState>()(
         {
           id: 'kingdom_chat',
           name: 'Kingdom Chat',
-          description: 'Main chat for all players in the kingdom',
+          description: 'Kingdom Chat',
+          type: 'default',
           isPrivate: false,
           members: [],
           messages: [],
@@ -474,7 +483,6 @@ export const useGameStore = create<GameState>()(
         const newCharacter: Character = {
           ...character,
           id: Date.now().toString(),
-          createdAt: Date.now(),
           level: 1,
           experience: 0,
           experienceToNextLevel: 100,
@@ -487,13 +495,16 @@ export const useGameStore = create<GameState>()(
             constitution: 10,
             intelligence: 10,
             wisdom: 10,
-            charisma: 10,
-            ...character.stats
+            charisma: 10
           },
-          inventory: [...initialItems],
+          inventory: [...startingItems],
           equipment: {},
           buffs: [],
-          debuffs: []
+          debuffs: [],
+          currentHealth: 100,
+          maxHealth: 100,
+          armorClass: 10,
+          damageDie: 6
         };
         
         set(state => ({
@@ -736,6 +747,7 @@ export const useGameStore = create<GameState>()(
           id: Date.now().toString(),
           name,
           description,
+          type: 'user',
           isPrivate,
           members: [],
           messages: [],
@@ -835,7 +847,13 @@ export const useGameStore = create<GameState>()(
         set(state => ({
           onlineUsers: [
             ...state.onlineUsers.filter(u => u.id !== userId),
-            { id: userId, name: userName, channelId: state.activeChannel }
+            { 
+              id: userId, 
+              name: userName, 
+              isOnline: true,
+              channelId: state.activeChannel,
+              lastSeen: Date.now()
+            }
           ]
         }));
       },
@@ -851,7 +869,13 @@ export const useGameStore = create<GameState>()(
           set(state => ({
             onlineUsers: [
               ...state.onlineUsers.filter(u => u.id !== userId),
-              { id: userId, name: userId, channelId }
+              { 
+                id: userId, 
+                name: userId, 
+                isOnline: true,
+                channelId,
+                lastSeen: Date.now()
+              }
             ]
           }));
         } else {
@@ -873,7 +897,6 @@ export const useGameStore = create<GameState>()(
           clanTag,
           members: [{
             id: state.activeCharacter.id,
-            name: state.activeCharacter.name,
             rank: 'Leader',
             joinedAt: Date.now()
           }],
@@ -904,7 +927,6 @@ export const useGameStore = create<GameState>()(
                   ...guild,
                   members: [...guild.members, {
                     id: state.activeCharacter!.id,
-                    name: state.activeCharacter!.name,
                     rank: 'Member',
                     joinedAt: Date.now()
                   }]
@@ -1157,7 +1179,7 @@ export const useGameStore = create<GameState>()(
         const attackingGuild = state.guilds.find(g => g.id === attackingGuildId);
         const defendingGuild = territory?.controllingGuild 
           ? state.guilds.find(g => g.id === territory.controllingGuild)
-          : null;
+          : undefined;
         
         if (!territory || !attackingGuild) return;
         
@@ -1169,7 +1191,9 @@ export const useGameStore = create<GameState>()(
           attackers: [],
           defenders: [],
           status: 'recruiting',
-          createdAt: Date.now()
+          startTime: Date.now(),
+          maxParticipants: 10,
+          currentTurn: null
         };
         
         set(state => ({
@@ -1370,13 +1394,20 @@ export const useGameStore = create<GameState>()(
         if (!familiarType) return false;
         
         const newFamiliar: Familiar = {
-          id: Date.now().toString(),
           name,
           type: type as any,
           level: 1,
           loyalty: 50,
-          abilities: familiarType.abilities,
-          stats: familiarType.baseStats
+          health: { current: 50, max: 50 },
+          mana: { current: 25, max: 25 },
+          stats: {
+            strength: 5,
+            dexterity: 5,
+            constitution: 5,
+            intelligence: 5,
+            wisdom: 5,
+            charisma: 5
+          }
         };
         
         // Spend diamonds
