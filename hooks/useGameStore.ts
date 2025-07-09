@@ -81,6 +81,7 @@ interface GameState {
   // Inventory management
   addItemToInventory: (item: Item) => void;
   removeItemFromInventory: (itemId: string) => void;
+  sellItem: (itemId: string) => boolean;
   equipItem: (itemId: string, slot: string) => void;
   unequipItem: (slot: string) => void;
   useItem: (itemId: string) => boolean;
@@ -639,6 +640,29 @@ export const useGameStore = create<GameState>()(
         get().updateCharacter(state.activeCharacter.id, {
           inventory: (state.activeCharacter.inventory || []).filter(item => item.id !== itemId)
         });
+      },
+      
+      sellItem: (itemId: string) => {
+        const state = get();
+        if (!state.activeCharacter) return false;
+        
+        const item = state.activeCharacter.inventory?.find(i => i.id === itemId);
+        if (!item) return false;
+        
+        const sellPrice = Math.floor(item.value * 0.5);
+        
+        // Add gold to character
+        get().updateCharacter(state.activeCharacter.id, {
+          gold: state.activeCharacter.gold + sellPrice
+        });
+        
+        // Remove item from inventory
+        get().removeItemFromInventory(itemId);
+        
+        // Show notification
+        get().addNotification(`Sold ${item.name} for ${sellPrice} gold!`, 'success');
+        
+        return true;
       },
       
       equipItem: (itemId: string, slot: string) => {

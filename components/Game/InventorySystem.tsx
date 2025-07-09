@@ -101,7 +101,9 @@ export default function InventorySystem() {
         { 
           text: 'Equip', 
           onPress: () => {
-            equipItem(item.id);
+            if (item.equipSlot) {
+              equipItem(item.id, item.equipSlot);
+            }
           }
         }
       ]
@@ -147,7 +149,7 @@ export default function InventorySystem() {
               
               // Remove the item
               const gameStore = useGameStore.getState();
-              gameStore.removeItem(item.id);
+              gameStore.removeItemFromInventory(item.id);
               
               Alert.alert('Revival Successful', `${activeCharacter.name} has been revived with ${reviveAmount} health!`);
             } else {
