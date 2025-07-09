@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
 import { useGameStore } from '@/hooks/useGameStore';
-import { COLORS } from '@/constants/colors';
+import COLORS from '@/constants/colors';
 import { Stack } from 'expo-router';
 
 export default function ShopScreen() {
@@ -110,18 +110,18 @@ export default function ShopScreen() {
   ];
 
   const [shopItems] = useState<ShopItem[]>(mockShopItems);
-  const { character, updateCharacter } = useGameStore((state) => ({
-    character: state.character,
+  const { characters, updateCharacter } = useGameStore((state) => ({
+    characters: state.characters,
     updateCharacter: state.updateCharacter,
   }));
 
   const handlePurchase = (item: ShopItem) => {
-    if (!character) {
+    if (!characters || characters.length === 0) {
       Alert.alert('Error', 'No character selected. Please create or select a character first.');
       return;
     }
 
-    if (character.gold < item.price) {
+    if (characters[0].gold < item.price) {
       Alert.alert('Insufficient Gold', 'You do not have enough gold to purchase this item.');
       return;
     }
@@ -129,7 +129,7 @@ export default function ShopScreen() {
     // Check requirements for weapons and armor
     if (item.category !== 'consumable' && item.requirements) {
       for (const [stat, value] of Object.entries(item.requirements)) {
-        if ((character.stats as any)[stat] < value) {
+        if ((characters[0].stats as any)[stat] < value) {
           Alert.alert('Requirement Not Met', `You need at least ${value} ${stat} to use this item.`);
           return;
         }
@@ -138,9 +138,9 @@ export default function ShopScreen() {
 
     // Update character inventory and gold
     const updatedCharacter = {
-      ...character,
-      gold: character.gold - item.price,
-      inventory: [...(character.inventory || []), item],
+      ...characters[0],
+      gold: characters[0].gold - item.price,
+      inventory: [...(characters[0].inventory || []), item],
     };
 
     updateCharacter(updatedCharacter);
