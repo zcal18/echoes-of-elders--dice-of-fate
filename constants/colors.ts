@@ -32,6 +32,13 @@ export default {
   experience: '#F59E0B',
   gold: '#FCD34D',
   
+  // Item rarity colors
+  common: '#9CA3AF',
+  uncommon: '#10B981',
+  rare: '#3B82F6',
+  epic: '#9333EA',
+  legendary: '#F59E0B',
+  
   // UI colors
   border: '#334155',
   overlay: 'rgba(0, 0, 0, 0.5)',
