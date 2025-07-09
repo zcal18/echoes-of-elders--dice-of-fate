@@ -5,7 +5,7 @@ import colors from '@/constants/colors';
 import { ChatMessage, ChatLobby, OnlineUser } from '@/types/game';
 import { MessageSquare, Plus, X, ChevronLeft, ChevronRight, Smile, ExternalLink, Minimize2, Users, Type, Palette, Activity, Send, Menu, Wifi, WifiOff, AlertCircle } from 'lucide-react-native';
 import { trpc, setAuthInfo } from '@/lib/trpc';
-import { connectWebSocket, disconnectWebSocket, sendWebSocketMessage, getWebSocketConnection, getWebSocketStatus, addConnectionStatusListener } from '@/lib/trpc';
+import { connectWebSocket, disconnectWebSocket, sendWebSocketMessage, addConnectionStatusListener } from '@/lib/trpc';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const isTablet = screenWidth > 768;
@@ -72,7 +72,6 @@ export default function ChatSystem() {
   const [selectedColor, setSelectedColor] = useState(TEXT_COLORS[0].value);
   const [isEmoteMode, setIsEmoteMode] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<string>('disconnected');
-  const [connectionRetries, setConnectionRetries] = useState(0);
   
   const scrollViewRef = useRef<ScrollView>(null);
   const textInputRef = useRef<TextInput>(null);
@@ -81,7 +80,6 @@ export default function ChatSystem() {
   
   const sendMessageMutation = trpc.chat.sendMessage.useMutation();
   const joinChannelMutation = trpc.chat.joinChannel.useMutation();
-  const leaveChannelMutation = trpc.chat.leaveChannel.useMutation();
   const createChannelMutation = trpc.chat.createChannel.useMutation();
   
   // Early return if not authenticated
@@ -103,40 +101,30 @@ export default function ChatSystem() {
   useEffect(() => {
     if (activeCharacter && isAuthenticated) {
       setAuthInfo(activeCharacter.id, activeCharacter.name);
-    } else {
-      setAuthInfo(null, null);
     }
   }, [activeCharacter, isAuthenticated]);
   
-  // Monitor connection status with improved listener
+  // Monitor connection status
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     
     const removeListener = addConnectionStatusListener((status) => {
       setConnectionStatus(status);
-      
-      // Reset retry count on successful connection
-      if (status === 'connected') {
-        setConnectionRetries(0);
-      } else if (status === 'error' || status === 'failed') {
-        setConnectionRetries(prev => prev + 1);
-      }
     });
     
     return removeListener;
   }, []);
   
-  // Connect to WebSocket when component mounts and user is authenticated
+  // Connect to WebSocket when component mounts
   useEffect(() => {
     if (activeCharacter && isAuthenticated && Platform.OS === 'web') {
-      console.log('Connecting to WebSocket for user:', activeCharacter.name);
+      console.log('Connecting to chat for:', activeCharacter.name);
       
       const ws = connectWebSocket(activeCharacter.id, activeCharacter.name, activeChannel);
       if (ws) {
         ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data.toString());
-            console.log('Received WebSocket message:', data);
             
             switch (data.type) {
               case 'message':
@@ -150,44 +138,15 @@ export default function ChatSystem() {
                 updateUserPresence(data.userId, false);
                 break;
               case 'error':
-                console.error('WebSocket error from server:', data.message);
+                console.error('Chat error:', data.message);
                 addNotification(`Chat error: ${data.message}`, 'error');
                 break;
               case 'joinConfirmed':
-                console.log('Successfully joined channel:', data.channelId);
+                console.log('Joined channel:', data.channelId);
                 break;
-              case 'pvpMatchFound':
-                addNotification('PVP match found!', 'success');
-                break;
-              case 'guildBattleInitiated':
-                addNotification('Guild battle initiated!', 'info');
-                break;
-              default:
-                console.log('Unknown WebSocket message type:', data.type);
             }
           } catch (error) {
-            console.error('Error parsing WebSocket message:', error);
-          }
-        };
-        
-        ws.onerror = (event) => {
-          console.error('WebSocket error in ChatSystem:', event);
-          addNotification('Connection error. Retrying...', 'error');
-        };
-        
-        ws.onopen = () => {
-          console.log('WebSocket connected successfully');
-          addNotification('Connected to chat', 'success');
-        };
-        
-        ws.onclose = (event) => {
-          console.log('WebSocket connection closed:', {
-            code: event.code,
-            reason: event.reason,
-            wasClean: event.wasClean
-          });
-          if (event.code !== 1000) {
-            addNotification('Disconnected from chat', 'error');
+            console.error('Error parsing message:', error);
           }
         };
       }
@@ -206,25 +165,18 @@ export default function ChatSystem() {
   // Join channel when active channel changes
   useEffect(() => {
     if (activeCharacter && activeChannel && isAuthenticated) {
-      console.log('Joining channel:', activeChannel);
-      
       joinChannelMutation.mutate({
         channelId: activeChannel,
         userId: activeCharacter.id,
         userName: activeCharacter.name
       });
       
-      // Send WebSocket message to switch channel
       if (Platform.OS === 'web') {
-        const success = sendWebSocketMessage({
+        sendWebSocketMessage({
           type: 'switchChannel',
           userId: activeCharacter.id,
           channelId: activeChannel
         });
-        
-        if (!success) {
-          console.warn('Failed to send channel switch message via WebSocket');
-        }
       }
     }
   }, [activeChannel, activeCharacter, isAuthenticated]);
@@ -269,10 +221,8 @@ export default function ChatSystem() {
     };
 
     try {
-      console.log('Sending message:', messageData);
       const result = await sendMessageMutation.mutateAsync(messageData);
       
-      // Create message object for local display and WebSocket
       const chatMessage: ChatMessage = {
         id: result.id,
         content: message.trim(),
@@ -283,30 +233,23 @@ export default function ChatSystem() {
         messageType
       };
       
-      // Add to local state immediately for better UX
       addChatMessage(chatMessage);
       
-      // Send via WebSocket for real-time delivery to other users
       if (Platform.OS === 'web') {
-        const success = sendWebSocketMessage({
+        sendWebSocketMessage({
           type: 'message',
           channelId: activeChannel,
           message: chatMessage
         });
-        
-        if (!success) {
-          console.warn('Failed to send message via WebSocket, message sent via HTTP only');
-        }
       }
       
       setMessage("");
     } catch (error) {
       console.error('Failed to send message:', error);
-      addNotification('Failed to send message. Please check your connection.', 'error');
+      addNotification('Failed to send message', 'error');
     }
   };
 
-  // Handle Enter key press on desktop
   const handleKeyPress = (event: any) => {
     if (Platform.OS === 'web' && event.nativeEvent.key === 'Enter' && !event.nativeEvent.shiftKey) {
       event.preventDefault();
@@ -361,45 +304,6 @@ export default function ChatSystem() {
     }
   };
   
-  const handleModAction = (userId: string, action: 'kick' | 'ban') => {
-    if (!userRole || (userRole !== 'admin' && userRole !== 'moderator')) {
-      return;
-    }
-    
-    if (action === 'kick') {
-      Alert.alert(
-        'Kick User',
-        'Are you sure you want to kick this user?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Kick',
-            style: 'destructive',
-            onPress: () => kickFromChat(userId, activeChannel)
-          }
-        ]
-      );
-    } else if (action === 'ban' && userRole === 'admin') {
-      Alert.prompt(
-        'Ban User',
-        'Enter reason for ban:',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Ban',
-            style: 'destructive',
-            onPress: (reason) => {
-              if (reason) {
-                banUser(userId, reason);
-              }
-            }
-          }
-        ],
-        'plain-text'
-      );
-    }
-  };
-  
   const toggleSidebar = () => {
     setSidebarVisible(!sidebarVisible);
   };
@@ -419,11 +323,8 @@ export default function ChatSystem() {
       case 'connecting':
       case 'reconnecting':
         return <AlertCircle size={16} color={colors.warning} />;
-      case 'error':
-      case 'failed':
-        return <WifiOff size={16} color={colors.error} />;
       default:
-        return <WifiOff size={16} color={colors.textSecondary} />;
+        return <WifiOff size={16} color={colors.error} />;
     }
   };
   
@@ -434,22 +335,15 @@ export default function ChatSystem() {
       case 'connecting':
         return 'Connecting...';
       case 'reconnecting':
-        return `Reconnecting... (${connectionRetries})`;
-      case 'error':
-        return 'Connection Error';
-      case 'failed':
-        return 'Connection Failed';
+        return 'Reconnecting...';
       default:
         return 'Disconnected';
     }
   };
   
   const renderMessage = (message: ChatMessage, index: number) => {
-    // Format emote messages differently
     const isEmote = message.messageType === 'emote';
     const formattedContent = isEmote ? `*${message.sender} ${message.content}*` : message.content;
-    
-    // Use message.id if available, otherwise fallback to index with timestamp
     const messageKey = message.id || `message-${index}-${message.timestamp || Date.now()}`;
     
     return (
@@ -483,26 +377,6 @@ export default function ChatSystem() {
                 <Text style={styles.reactionCount}>{reaction.count}</Text>
               </TouchableOpacity>
             ))}
-          </View>
-        )}
-        
-        {userRole && (userRole === 'admin' || userRole === 'moderator') && message.sender && (
-          <View style={styles.moderationControls}>
-            <TouchableOpacity
-              style={styles.moderationButton}
-              onPress={() => handleModAction(message.sender, 'kick')}
-            >
-              <Text style={styles.moderationButtonText}>Kick</Text>
-            </TouchableOpacity>
-            
-            {userRole === 'admin' && (
-              <TouchableOpacity
-                style={[styles.moderationButton, styles.banButton]}
-                onPress={() => handleModAction(message.sender, 'ban')}
-              >
-                <Text style={styles.moderationButtonText}>Ban</Text>
-              </TouchableOpacity>
-            )}
           </View>
         )}
       </View>
@@ -607,7 +481,6 @@ export default function ChatSystem() {
               )}
             </View>
             <View style={styles.headerButtons}>
-              {/* Enhanced Connection Status Indicator */}
               <View style={styles.connectionStatus}>
                 {getConnectionIcon()}
                 <Text style={[
@@ -665,7 +538,6 @@ export default function ChatSystem() {
             Platform.OS === 'web' && !isMobile && styles.desktopInputContainer,
             isDesktop && styles.desktopInputContainerWide
           ]}>
-            {/* Inline Input Controls */}
             <View style={[
               styles.inlineInputControls,
               Platform.OS === 'web' && !isMobile && styles.desktopInputControls
@@ -762,7 +634,7 @@ export default function ChatSystem() {
           </ScrollView>
         </Animated.View>
         
-        {/* New Room Modal */}
+        {/* Modals */}
         <Modal
           visible={showNewRoomModal}
           transparent
@@ -773,9 +645,7 @@ export default function ChatSystem() {
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Create New Channel</Text>
-                <TouchableOpacity
-                  onPress={() => setShowNewRoomModal(false)}
-                >
+                <TouchableOpacity onPress={() => setShowNewRoomModal(false)}>
                   <X size={24} color={colors.text} />
                 </TouchableOpacity>
               </View>
@@ -807,7 +677,6 @@ export default function ChatSystem() {
           </View>
         </Modal>
         
-        {/* Emotes Modal */}
         <Modal
           visible={showEmotesModal}
           transparent
@@ -818,9 +687,7 @@ export default function ChatSystem() {
             <View style={styles.emotesModalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Emote</Text>
-                <TouchableOpacity
-                  onPress={() => setShowEmotesModal(false)}
-                >
+                <TouchableOpacity onPress={() => setShowEmotesModal(false)}>
                   <X size={24} color={colors.text} />
                 </TouchableOpacity>
               </View>
@@ -840,7 +707,6 @@ export default function ChatSystem() {
           </View>
         </Modal>
         
-        {/* Color Selection Modal */}
         <Modal
           visible={showColorModal}
           transparent
@@ -851,9 +717,7 @@ export default function ChatSystem() {
             <View style={styles.colorModalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Text Color</Text>
-                <TouchableOpacity
-                  onPress={() => setShowColorModal(false)}
-                >
+                <TouchableOpacity onPress={() => setShowColorModal(false)}>
                   <X size={24} color={colors.text} />
                 </TouchableOpacity>
               </View>
@@ -1168,25 +1032,6 @@ const styles = StyleSheet.create({
   reactionCount: {
     fontSize: 12,
     color: colors.textSecondary,
-  },
-  moderationControls: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-  },
-  moderationButton: {
-    backgroundColor: colors.error + '20',
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  banButton: {
-    backgroundColor: colors.error + '40',
-  },
-  moderationButtonText: {
-    color: colors.error,
-    fontSize: 12,
-    fontWeight: 'bold',
   },
   
   // Input Container Styles
