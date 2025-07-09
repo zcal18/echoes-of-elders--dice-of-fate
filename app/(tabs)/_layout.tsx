@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
-import { Sword, Package, Users, MessageSquare, User, Mail, ShoppingBag, Home } from 'lucide-react-native';
+import { Sword, Package, Users, MessageSquare, Mail, ShoppingBag, Home } from 'lucide-react-native';
 import colors from '@/constants/colors';
 
 export default function TabLayout() {
@@ -77,14 +77,6 @@ export default function TabLayout() {
           title: 'Inbox',
           tabBarIcon: ({ color, size }) => <Mail size={size} color={color} />,
           headerTitle: 'Messages',
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
-          headerTitle: 'Character Profile',
         }}
       />
       <Tabs.Screen
