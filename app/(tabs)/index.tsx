@@ -23,6 +23,7 @@ export default function HomeScreen() {
     canSummonFamiliar,
     summonFamiliar,
     dismissFamiliar,
+    getGuildRoleInfo,
     logout
   } = useGameStore();
   
@@ -80,7 +81,8 @@ export default function HomeScreen() {
     return {
       name: guild.name,
       rank: member?.rank || 'Member',
-      clanTag: guild.clanTag
+      clanTag: guild.clanTag,
+      isRoyal: guild.isRoyal || false
     };
   };
   
@@ -99,6 +101,16 @@ export default function HomeScreen() {
     }
     const characterClass = activeCharacter.class || "Unknown Class";
     return characterClass.charAt(0).toUpperCase() + characterClass.slice(1).toLowerCase();
+  };
+  
+  // Get guild role display with emoji
+  const getGuildRoleDisplay = (): string => {
+    if (!activeCharacter.guildRole || activeCharacter.guildRole === 'Member') {
+      return '';
+    }
+    
+    const roleInfo = getGuildRoleInfo(activeCharacter.guildRole);
+    return `${roleInfo.emoji} ${activeCharacter.guildRole}`;
   };
   
   // Convert Character to CombatParticipant format for ReactivePlayerCard
@@ -130,6 +142,7 @@ export default function HomeScreen() {
       profileImage: activeCharacter.profileImage,
       customRace: activeCharacter.customRace,
       customClass: activeCharacter.customClass,
+      guildRole: activeCharacter.guildRole,
       lastDiceRoll: activeCharacter.lastDiceRoll
     };
   };
@@ -147,6 +160,7 @@ export default function HomeScreen() {
   };
   
   const guildInfo = getGuildInfo();
+  const guildRoleDisplay = getGuildRoleDisplay();
   
   // Check if character is fainted
   const isCharacterFainted = activeCharacter.health.current <= 0;
@@ -187,14 +201,22 @@ export default function HomeScreen() {
                 {guildInfo && (
                   <Text style={styles.clanTag}>[{guildInfo.clanTag}]</Text>
                 )}
+                {guildRoleDisplay && (
+                  <Text style={styles.royalRole}>{guildRoleDisplay}</Text>
+                )}
               </View>
               <Text style={styles.characterDetails}>
                 Level {activeCharacter.level} {getRaceDisplayName()} {getClassDisplayName()}
               </Text>
               {guildInfo && (
-                <Text style={styles.guildInfo}>
-                  {guildInfo.name} ({guildInfo.rank})
-                </Text>
+                <View style={styles.guildInfoContainer}>
+                  <Text style={[styles.guildInfo, guildInfo.isRoyal && styles.royalGuildInfo]}>
+                    {guildInfo.isRoyal ? '👑 ' : ''}{guildInfo.name} ({guildInfo.rank})
+                  </Text>
+                  {guildInfo.isRoyal && (
+                    <Text style={styles.royalGuildSubtext}>Royal Guild</Text>
+                  )}
+                </View>
               )}
               {activeCharacter.familiar && (
                 <Text style={styles.familiarInfo}>
@@ -236,6 +258,25 @@ export default function HomeScreen() {
             </View>
           </View>
         </View>
+        
+        {/* Royal Buffs Display */}
+        {activeCharacter.guildRole && activeCharacter.guildRole !== 'Member' && (
+          <View style={styles.royalBuffsSection}>
+            <Text style={styles.royalBuffsTitle}>
+              {getGuildRoleInfo(activeCharacter.guildRole).emoji} Royal Buffs Active
+            </Text>
+            <Text style={styles.royalBuffsDescription}>
+              {getGuildRoleInfo(activeCharacter.guildRole).description}
+            </Text>
+            <View style={styles.royalBuffsList}>
+              {Object.entries(getGuildRoleInfo(activeCharacter.guildRole).buffs).map(([stat, value]) => (
+                <Text key={stat} style={styles.royalBuff}>
+                  +{value} {stat.charAt(0).toUpperCase() + stat.slice(1)}
+                </Text>
+              ))}
+            </View>
+          </View>
+        )}
         
         {/* Character Stats Overview */}
         <View style={styles.statsSection}>
@@ -415,12 +456,16 @@ export default function HomeScreen() {
             <Text style={styles.activityText}>
               {isCharacterFainted 
                 ? `${activeCharacter.name} has fainted and needs revival!`
+                : guildRoleDisplay
+                ? `Welcome back, ${guildRoleDisplay} ${activeCharacter.name}! Your royal duties await.`
                 : `Welcome back, ${activeCharacter.name}! Your adventure awaits.`
               }
             </Text>
             <Text style={styles.activitySubtext}>
               {isCharacterFainted 
                 ? "Use a revive potion from your inventory to continue your journey."
+                : guildInfo?.isRoyal
+                ? "As a member of the royal guild, you have access to special kingdom privileges."
                 : "Continue your journey in the mystical realm of Echoes of Elders."
               }
             </Text>
@@ -667,6 +712,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
+    flexWrap: 'wrap',
   },
   characterName: {
     fontSize: isTablet ? 24 : 20,
@@ -678,16 +724,37 @@ const styles = StyleSheet.create({
     fontSize: isTablet ? 16 : 14,
     fontWeight: 'bold',
     color: colors.secondary,
+    marginRight: 8,
+  },
+  royalRole: {
+    fontSize: isTablet ? 16 : 14,
+    fontWeight: 'bold',
+    color: colors.royal,
+    backgroundColor: colors.royal + '20',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   characterDetails: {
     fontSize: isTablet ? 16 : 14,
     color: colors.textSecondary,
     marginBottom: 2,
   },
+  guildInfoContainer: {
+    marginBottom: 2,
+  },
   guildInfo: {
     fontSize: isTablet ? 14 : 12,
     color: colors.success,
-    marginBottom: 2,
+  },
+  royalGuildInfo: {
+    color: colors.royal,
+    fontWeight: 'bold',
+  },
+  royalGuildSubtext: {
+    fontSize: isTablet ? 12 : 10,
+    color: colors.royal,
+    fontStyle: 'italic',
   },
   familiarInfo: {
     fontSize: isTablet ? 14 : 12,
@@ -740,6 +807,45 @@ const styles = StyleSheet.create({
   currencyLabel: {
     fontSize: isTablet ? 12 : 10,
     color: colors.textSecondary,
+  },
+  royalBuffsSection: {
+    backgroundColor: colors.royal,
+    borderRadius: 20,
+    padding: isTablet ? 20 : 16,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  royalBuffsTitle: {
+    fontSize: isTablet ? 20 : 18,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  royalBuffsDescription: {
+    fontSize: isTablet ? 14 : 12,
+    color: colors.text,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  royalBuffsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  royalBuff: {
+    fontSize: isTablet ? 14 : 12,
+    color: colors.text,
+    backgroundColor: colors.background + '40',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    fontWeight: 'bold',
   },
   statsSection: {
     backgroundColor: colors.surface,

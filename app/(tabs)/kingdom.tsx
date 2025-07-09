@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Stack } from 'expo-router';
-import { Mail, ShoppingCart, User, Swords, Shield } from 'lucide-react-native';
+import { Mail, ShoppingCart, User, Swords, Shield, Crown } from 'lucide-react-native';
 import { useGameStore } from '@/hooks/useGameStore';
 import colors from '@/constants/colors';
 
@@ -20,15 +20,20 @@ export default function KingdomScreen() {
     guilds,
     guildBattles,
     activeGuildBattle,
+    royalSpireUnlocked,
     claimTerritory,
-    unlockRoyalSpire,
+    checkRoyalSpireUnlock,
     initiateGuildBattle,
     joinGuildBattle,
-    startGuildBattle
+    startGuildBattle,
+    assignGuildRole,
+    removeGuildRole,
+    getGuildRoleInfo
   } = useGameStore();
   
   const [selectedTerritory, setSelectedTerritory] = useState<string | null>(null);
   const [websocket, setWebsocket] = useState<WebSocket | null>(null);
+  const [showRoyalManagement, setShowRoyalManagement] = useState(false);
   
   // WebSocket connection for real-time guild battles
   useEffect(() => {
@@ -104,7 +109,8 @@ export default function KingdomScreen() {
     return null;
   }
   
-  const getKingGuild = () => {
+  // Memoize the king guild calculation to prevent infinite loops
+  const kingGuild = useMemo(() => {
     // Check if any guild controls all claimable territories (excluding water and royal spire)
     const claimableTerritories = territories.filter(t => t.isClaimable !== false && !t.isRoyalSpire);
     const guildTerritoryCount: Record<string, number> = {};
@@ -116,26 +122,22 @@ export default function KingdomScreen() {
       }
     });
     
-    const totalClaimableTerritories = claimableTerritories.length;
-    const kingGuildId = Object.keys(guildTerritoryCount).find(
-      guildId => guildTerritoryCount[guildId] === totalClaimableTerritories
-    );
-    
-    // If a guild controls all territories, unlock the Royal Spire
-    if (kingGuildId) {
-      unlockRoyalSpire();
-    }
-    
     // Check if the Royal Spire is controlled to determine the true king
     const royalSpire = territories.find(t => t.isRoyalSpire);
     if (royalSpire?.controllingGuild) {
-      return guilds.find(g => g.id === royalSpire.controllingGuild);
+      const guild = guilds.find(g => g.id === royalSpire.controllingGuild);
+      if (guild) {
+        // Mark guild as royal if it controls the Royal Spire
+        if (!guild.isRoyal) {
+          // This should be handled by the claimTerritory function
+        }
+        return guild;
+      }
     }
     
     return null;
-  };
+  }, [territories, guilds]);
   
-  const kingGuild = getKingGuild();
   const royalSpire = territories.find(t => t.isRoyalSpire);
   const isRoyalSpireUnlocked = royalSpire?.isClaimable !== false;
   
@@ -261,6 +263,26 @@ export default function KingdomScreen() {
   const handleClaimTerritory = () => {
     if (selectedTerritoryData && activeCharacter.guildId && canClaimTerritory()) {
       claimTerritory(selectedTerritoryData.id, activeCharacter.guildId);
+      
+      // If claiming the Royal Spire, make the guild royal
+      if (selectedTerritoryData.isRoyalSpire) {
+        // Mark guild as royal and controlling the Royal Spire
+        const updatedGuilds = guilds.map(g => 
+          g.id === activeCharacter.guildId 
+            ? { 
+                ...g, 
+                isRoyal: true, 
+                royalSpireControlled: true,
+                royalRoles: g.royalRoles || {}
+              }
+            : { ...g, isRoyal: false, royalSpireControlled: false }
+        );
+        
+        // This would need to be handled in the game store
+        // For now, we'll show the royal management
+        setShowRoyalManagement(true);
+      }
+      
       setSelectedTerritory(null);
     }
   };
@@ -299,6 +321,111 @@ export default function KingdomScreen() {
     );
   };
 
+  const getGuildTerritoryInfo = () => {
+    if (!activeCharacter.guildId) return null;
+    
+    const guildTerritories = territories.filter(t => t.controllingGuild === activeCharacter.guildId);
+    const activeBattles = guildBattles.filter(b => 
+      (b.attackingGuild.id === activeCharacter.guildId || b.defendingGuild?.id === activeCharacter.guildId) &&
+      (b.status === 'recruiting' || b.status === 'active')
+    );
+    
+    return {
+      territories: guildTerritories,
+      battles: activeBattles
+    };
+  };
+
+  const guildTerritoryInfo = getGuildTerritoryInfo();
+  const userGuild = guilds.find(g => g.id === activeCharacter.guildId);
+  const isGuildLeader = userGuild?.members.find(m => m.id === activeCharacter.id)?.rank === 'Leader';
+
+  const handleAssignRole = (characterId: string, role: any) => {
+    if (activeCharacter.guildId && isGuildLeader) {
+      assignGuildRole(activeCharacter.guildId, characterId, role);
+    }
+  };
+
+  const handleRemoveRole = (characterId: string) => {
+    if (activeCharacter.guildId && isGuildLeader) {
+      removeGuildRole(activeCharacter.guildId, characterId);
+    }
+  };
+
+  const renderRoyalManagement = () => {
+    if (!userGuild?.isRoyal || !isGuildLeader) return null;
+
+    const guildMembers = userGuild.members;
+    const royalRoles = ['King', 'Queen', 'Knight', 'Bishop'];
+
+    return (
+      <View style={styles.royalManagement}>
+        <Text style={styles.royalManagementTitle}>👑 Royal Court Management</Text>
+        <Text style={styles.royalManagementSubtitle}>
+          Assign royal roles to guild members to grant powerful buffs
+        </Text>
+
+        {royalRoles.map(role => {
+          const roleInfo = getGuildRoleInfo(role as any);
+          const assignedMember = guildMembers.find(m => 
+            userGuild.royalRoles && userGuild.royalRoles[role as keyof typeof userGuild.royalRoles] === m.id
+          );
+
+          return (
+            <View key={role} style={styles.royalRoleCard}>
+              <View style={styles.royalRoleHeader}>
+                <Text style={styles.royalRoleTitle}>
+                  {roleInfo.emoji} {role}
+                </Text>
+                <Text style={styles.royalRoleDescription}>
+                  {roleInfo.description}
+                </Text>
+              </View>
+
+              {assignedMember ? (
+                <View style={styles.assignedMember}>
+                  <Text style={styles.assignedMemberName}>
+                    Assigned to: {/* We'd need to get character name from ID */}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.removeRoleButton}
+                    onPress={() => handleRemoveRole(assignedMember.id)}
+                  >
+                    <Text style={styles.removeRoleButtonText}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.availableMembers}>
+                  <Text style={styles.availableMembersTitle}>Available Members:</Text>
+                  {guildMembers.map(member => (
+                    <TouchableOpacity
+                      key={member.id}
+                      style={styles.memberOption}
+                      onPress={() => handleAssignRole(member.id, role)}
+                    >
+                      <Text style={styles.memberOptionText}>
+                        Assign {/* We'd need character name */}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
+              <View style={styles.roleBuffs}>
+                <Text style={styles.roleBuffsTitle}>Buffs:</Text>
+                {Object.entries(roleInfo.buffs).map(([stat, value]) => (
+                  <Text key={stat} style={styles.roleBuff}>
+                    +{value} {stat.charAt(0).toUpperCase() + stat.slice(1)}
+                  </Text>
+                ))}
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -311,10 +438,22 @@ export default function KingdomScreen() {
             <Text style={styles.kingDescription}>
               The guild {kingGuild.name} has claimed the Royal Spire and rules all of Ryh'Din!
             </Text>
+            
+            {kingGuild.id === activeCharacter.guildId && isGuildLeader && (
+              <TouchableOpacity
+                style={styles.manageRoyalButton}
+                onPress={() => setShowRoyalManagement(!showRoyalManagement)}
+              >
+                <Crown size={20} color={colors.text} />
+                <Text style={styles.manageRoyalButtonText}>
+                  {showRoyalManagement ? 'Hide' : 'Manage'} Royal Court
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
         
-        {!kingGuild && isRoyalSpireUnlocked && (
+        {!kingGuild && royalSpireUnlocked && (
           <View style={styles.royalSpireAvailable}>
             <Text style={styles.royalSpireTitle}>🏰 The Royal Spire Awaits!</Text>
             <Text style={styles.royalSpireDescription}>
@@ -322,6 +461,8 @@ export default function KingdomScreen() {
             </Text>
           </View>
         )}
+
+        {showRoyalManagement && renderRoyalManagement()}
         
         {/* Active Guild Battles */}
         {guildBattles.length > 0 && (
@@ -582,6 +723,22 @@ const styles = StyleSheet.create({
     fontSize: isTablet ? 16 : 14,
     color: colors.background,
     textAlign: 'center',
+    marginBottom: 12,
+  },
+  manageRoyalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.royal,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 8,
+    marginTop: 8,
+  },
+  manageRoyalButtonText: {
+    color: colors.text,
+    fontSize: isTablet ? 16 : 14,
+    fontWeight: 'bold',
   },
   royalSpireAvailable: {
     backgroundColor: colors.royal,
@@ -600,6 +757,98 @@ const styles = StyleSheet.create({
     fontSize: isTablet ? 16 : 14,
     color: colors.text,
     textAlign: 'center',
+  },
+  royalManagement: {
+    backgroundColor: colors.royal,
+    borderRadius: 12,
+    padding: isTablet ? 20 : 16,
+    marginBottom: 24,
+  },
+  royalManagementTitle: {
+    fontSize: isTablet ? 22 : 20,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  royalManagementSubtitle: {
+    fontSize: isTablet ? 14 : 12,
+    color: colors.text,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  royalRoleCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  royalRoleHeader: {
+    marginBottom: 8,
+  },
+  royalRoleTitle: {
+    fontSize: isTablet ? 18 : 16,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  royalRoleDescription: {
+    fontSize: isTablet ? 12 : 10,
+    color: colors.textSecondary,
+  },
+  assignedMember: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  assignedMemberName: {
+    fontSize: isTablet ? 14 : 12,
+    color: colors.text,
+  },
+  removeRoleButton: {
+    backgroundColor: colors.error,
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  removeRoleButtonText: {
+    color: colors.text,
+    fontSize: isTablet ? 12 : 10,
+    fontWeight: 'bold',
+  },
+  availableMembers: {
+    marginBottom: 8,
+  },
+  availableMembersTitle: {
+    fontSize: isTablet ? 14 : 12,
+    color: colors.text,
+    marginBottom: 4,
+  },
+  memberOption: {
+    backgroundColor: colors.primary,
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginBottom: 4,
+  },
+  memberOptionText: {
+    color: colors.text,
+    fontSize: isTablet ? 12 : 10,
+  },
+  roleBuffs: {
+    borderTopWidth: 1,
+    borderTopColor: colors.surfaceLight,
+    paddingTop: 8,
+  },
+  roleBuffsTitle: {
+    fontSize: isTablet ? 12 : 10,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  roleBuff: {
+    fontSize: isTablet ? 11 : 9,
+    color: colors.success,
   },
   guildBattlesSection: {
     marginBottom: 24,

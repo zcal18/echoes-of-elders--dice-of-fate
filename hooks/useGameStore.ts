@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GameState, ChatMessage, ChatLobby, Character, ShopItem, Enemy, FamiliarType, Item, Guild, Party, Friend, CreateCharacterInput, Territory, Mail, Research, PvpPlayer, PvpMatch, OnlineUser, GuildBattle, EnemyEditorData } from '@/types/game';
+import { GameState, ChatMessage, ChatLobby, Character, ShopItem, Enemy, FamiliarType, Item, Guild, Party, Friend, CreateCharacterInput, Territory, Mail, Research, PvpPlayer, PvpMatch, OnlineUser, GuildBattle, EnemyEditorData, GuildRole, GuildRoleInfo } from '@/types/game';
 import { shopItems } from '@/constants/items';
 import { getAllEnemies } from '@/constants/enemies';
 import { races, classes, spells } from '@/constants/gameData';
@@ -22,6 +22,56 @@ const familiarLevelRequirements: Record<FamiliarType, number> = {
   golem: 15,
   dragon: 25,
   phoenix: 35
+};
+
+// Royal Guild Role Information
+const guildRoleInfo: Record<GuildRole, GuildRoleInfo> = {
+  King: {
+    role: 'King',
+    emoji: '👑',
+    buffs: {
+      strength: 5,
+      charisma: 5,
+      leadership: 10
+    },
+    description: 'The supreme ruler of the kingdom, grants massive combat and leadership bonuses'
+  },
+  Queen: {
+    role: 'Queen',
+    emoji: '👸',
+    buffs: {
+      wisdom: 5,
+      intelligence: 5,
+      diplomacy: 10
+    },
+    description: 'The wise queen, grants magical and diplomatic bonuses'
+  },
+  Knight: {
+    role: 'Knight',
+    emoji: '⚔️',
+    buffs: {
+      strength: 4,
+      constitution: 4,
+      combat: 8
+    },
+    description: 'The royal knight, grants significant combat and defensive bonuses'
+  },
+  Bishop: {
+    role: 'Bishop',
+    emoji: '🛡️',
+    buffs: {
+      wisdom: 4,
+      intelligence: 3,
+      healing: 8
+    },
+    description: 'The holy bishop, grants magical and healing bonuses'
+  },
+  Member: {
+    role: 'Member',
+    emoji: '',
+    buffs: {},
+    description: 'Regular guild member'
+  }
 };
 
 // Enhanced territory data for 8x8 grid
@@ -277,6 +327,7 @@ export const useGameStore = create<GameState>()(
       
       // Territory System (not persisted)
       territories: initialTerritories,
+      royalSpireUnlocked: false,
       
       // Guild Battles
       guildBattles: [],
@@ -861,19 +912,52 @@ export const useGameStore = create<GameState>()(
               : territory
           )
         }));
+        
+        // Check if Royal Spire should be unlocked after claiming
+        get().checkRoyalSpireUnlock();
       },
       
       unlockRoyalSpire: () => {
-        const { isAuthenticated } = get();
-        if (!isAuthenticated) return;
+        const { isAuthenticated, royalSpireUnlocked } = get();
+        if (!isAuthenticated || royalSpireUnlocked) return;
         
         set((state: GameState) => ({
           territories: state.territories.map(territory =>
             territory.isRoyalSpire
               ? { ...territory, isClaimable: true }
               : territory
-          )
+          ),
+          royalSpireUnlocked: true
         }));
+        
+        get().addNotification('🏰 The Royal Spire has emerged! A guild may now claim the crown!', 'success');
+      },
+      
+      checkRoyalSpireUnlock: () => {
+        const { territories, guilds, royalSpireUnlocked } = get();
+        
+        if (royalSpireUnlocked) return; // Already unlocked
+        
+        // Check if any guild controls all claimable territories (excluding water and royal spire)
+        const claimableTerritories = territories.filter(t => t.isClaimable !== false && !t.isRoyalSpire);
+        const guildTerritoryCount: Record<string, number> = {};
+        
+        claimableTerritories.forEach(territory => {
+          if (territory.controllingGuild) {
+            guildTerritoryCount[territory.controllingGuild] = 
+              (guildTerritoryCount[territory.controllingGuild] || 0) + 1;
+          }
+        });
+        
+        const totalClaimableTerritories = claimableTerritories.length;
+        const kingGuildId = Object.keys(guildTerritoryCount).find(
+          guildId => guildTerritoryCount[guildId] === totalClaimableTerritories
+        );
+        
+        // If a guild controls all territories, unlock the Royal Spire
+        if (kingGuildId) {
+          get().unlockRoyalSpire();
+        }
       },
       
       // Guild Battle Functions
@@ -938,6 +1022,140 @@ export const useGameStore = create<GameState>()(
               : battle
           ),
           activeGuildBattle: state.guildBattles.find(b => b.id === battleId) || null
+        }));
+      },
+      
+      // Royal Guild Functions
+      assignGuildRole: (guildId: string, characterId: string, role: GuildRole) => {
+        const { isAuthenticated, guilds, characters } = get();
+        if (!isAuthenticated) return;
+        
+        const guild = guilds.find(g => g.id === guildId);
+        if (!guild || !guild.isRoyal) return;
+        
+        // Remove the role from any other character first
+        set((state: GameState) => ({
+          characters: state.characters.map(c => 
+            c.guildId === guildId && c.guildRole === role 
+              ? { ...c, guildRole: 'Member' }
+              : c
+          ),
+          guilds: state.guilds.map(g => 
+            g.id === guildId 
+              ? { 
+                  ...g, 
+                  royalRoles: { 
+                    ...g.royalRoles, 
+                    [role]: characterId 
+                  } 
+                }
+              : g
+          )
+        }));
+        
+        // Assign the new role
+        set((state: GameState) => ({
+          characters: state.characters.map(c => 
+            c.id === characterId 
+              ? { ...c, guildRole: role }
+              : c
+          ),
+          activeCharacter: state.activeCharacter?.id === characterId
+            ? { ...state.activeCharacter, guildRole: role }
+            : state.activeCharacter
+        }));
+        
+        // Apply royal buffs
+        get().applyRoyalBuffs(characterId);
+        
+        const character = characters.find(c => c.id === characterId);
+        get().addNotification(`${character?.name} has been appointed as ${role}! ${guildRoleInfo[role].emoji}`, 'success');
+      },
+      
+      removeGuildRole: (guildId: string, characterId: string) => {
+        const { isAuthenticated } = get();
+        if (!isAuthenticated) return;
+        
+        // Remove royal buffs first
+        get().removeRoyalBuffs(characterId);
+        
+        set((state: GameState) => ({
+          characters: state.characters.map(c => 
+            c.id === characterId 
+              ? { ...c, guildRole: 'Member' }
+              : c
+          ),
+          activeCharacter: state.activeCharacter?.id === characterId
+            ? { ...state.activeCharacter, guildRole: 'Member' }
+            : state.activeCharacter,
+          guilds: state.guilds.map(g => {
+            if (g.id === guildId && g.royalRoles) {
+              const newRoyalRoles = { ...g.royalRoles };
+              Object.keys(newRoyalRoles).forEach(role => {
+                if (newRoyalRoles[role as keyof typeof newRoyalRoles] === characterId) {
+                  delete newRoyalRoles[role as keyof typeof newRoyalRoles];
+                }
+              });
+              return { ...g, royalRoles: newRoyalRoles };
+            }
+            return g;
+          })
+        }));
+      },
+      
+      getGuildRoleInfo: (role: GuildRole) => {
+        return guildRoleInfo[role];
+      },
+      
+      applyRoyalBuffs: (characterId: string) => {
+        const { characters, activeCharacter } = get();
+        const character = characters.find(c => c.id === characterId);
+        
+        if (!character || !character.guildRole || character.guildRole === 'Member') return;
+        
+        const roleInfo = guildRoleInfo[character.guildRole];
+        const royalBuff = {
+          id: `royal_${character.guildRole.toLowerCase()}`,
+          name: `Royal ${character.guildRole}`,
+          description: roleInfo.description,
+          duration: -1, // Permanent while in role
+          effects: roleInfo.buffs
+        };
+        
+        set((state: GameState) => ({
+          characters: state.characters.map(c => 
+            c.id === characterId 
+              ? { 
+                  ...c, 
+                  buffs: [...(c.buffs || []).filter(b => !b.id.startsWith('royal_')), royalBuff]
+                }
+              : c
+          ),
+          activeCharacter: state.activeCharacter?.id === characterId
+            ? { 
+                ...state.activeCharacter, 
+                buffs: [...(state.activeCharacter.buffs || []).filter(b => !b.id.startsWith('royal_')), royalBuff]
+              }
+            : state.activeCharacter
+        }));
+      },
+      
+      removeRoyalBuffs: (characterId: string) => {
+        set((state: GameState) => ({
+          characters: state.characters.map(c => 
+            c.id === characterId 
+              ? { 
+                  ...c, 
+                  buffs: (c.buffs || []).filter(b => !b.id.startsWith('royal_'))
+                }
+              : c
+          ),
+          activeCharacter: state.activeCharacter?.id === characterId
+            ? { 
+                ...state.activeCharacter, 
+                buffs: (state.activeCharacter.buffs || []).filter(b => !b.id.startsWith('royal_'))
+              }
+            : state.activeCharacter
         }));
       },
       
@@ -1543,6 +1761,11 @@ export const useGameStore = create<GameState>()(
         const guild = guilds.find(g => g.id === activeCharacter.guildId);
         if (!guild) return;
         
+        // Remove royal role and buffs if any
+        if (activeCharacter.guildRole && activeCharacter.guildRole !== 'Member') {
+          get().removeGuildRole(activeCharacter.guildId, activeCharacter.id);
+        }
+        
         // Leave guild chat
         get().leaveGuildChat(activeCharacter.guildId);
         
@@ -1556,9 +1779,9 @@ export const useGameStore = create<GameState>()(
               : g
           ),
           characters: state.characters.map((c: Character) =>
-            c.id === activeCharacter.id ? { ...c, guildId: undefined } : c
+            c.id === activeCharacter.id ? { ...c, guildId: undefined, guildRole: undefined } : c
           ),
-          activeCharacter: { ...activeCharacter, guildId: undefined }
+          activeCharacter: { ...activeCharacter, guildId: undefined, guildRole: undefined }
         }));
       },
       
@@ -2466,6 +2689,7 @@ export const useGameStore = create<GameState>()(
           
           // Reset non-persisted data to initial state
           territories: initialTerritories,
+          royalSpireUnlocked: false,
           researchItems: initialResearch,
           shopItems: shopItems.map((item: ShopItem) => ({ ...item, stock: item.stock || 10 })),
           chatLobbies: [
@@ -2553,6 +2777,7 @@ export const useGameStore = create<GameState>()(
           
           // Initialize non-persisted state
           state.territories = initialTerritories;
+          state.royalSpireUnlocked = false;
           state.researchItems = initialResearch;
           state.shopItems = shopItems.map((item: ShopItem) => ({ ...item, stock: item.stock || 10 }));
           state.chatLobbies = [

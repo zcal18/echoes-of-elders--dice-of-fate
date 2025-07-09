@@ -31,6 +31,7 @@ export interface Character {
   debuffs: Debuff[];
   familiar?: Familiar;
   guildId?: string;
+  guildRole?: GuildRole;
   customClass?: CustomClass;
   customRace?: CustomRace;
   unlockedSpells?: string[];
@@ -123,6 +124,36 @@ export interface Familiar {
 }
 
 export type FamiliarType = 'sprite' | 'raven' | 'wolf' | 'golem' | 'dragon' | 'phoenix';
+
+// Guild Role types
+export type GuildRole = 'King' | 'Queen' | 'Knight' | 'Bishop' | 'Member';
+
+export interface GuildRoleInfo {
+  role: GuildRole;
+  emoji: string;
+  buffs: {
+    [stat: string]: number;
+  };
+  description: string;
+}
+
+export interface RoyalGuild {
+  id: string;
+  name: string;
+  clanTag: string;
+  description: string;
+  members: GuildMember[];
+  createdAt: number;
+  level: number;
+  isRoyal: boolean;
+  royalRoles: {
+    King?: string; // character ID
+    Queen?: string; // character ID
+    Knight?: string; // character ID
+    Bishop?: string; // character ID
+  };
+  royalSpireControlled: boolean;
+}
 
 // Shop types
 export interface ShopItem {
@@ -277,6 +308,14 @@ export interface Guild {
   members: GuildMember[];
   createdAt: number;
   level: number;
+  isRoyal?: boolean;
+  royalRoles?: {
+    King?: string; // character ID
+    Queen?: string; // character ID
+    Knight?: string; // character ID
+    Bishop?: string; // character ID
+  };
+  royalSpireControlled?: boolean;
 }
 
 export interface GuildMember {
@@ -513,6 +552,7 @@ export interface CombatParticipant {
   profileImage?: string;
   customRace?: CustomRace;
   customClass?: CustomClass;
+  guildRole?: GuildRole;
   lastDiceRoll?: {
     value: number;
     diceType: number;
@@ -561,6 +601,7 @@ export interface GameState {
   
   // Territory System
   territories: Territory[];
+  royalSpireUnlocked: boolean;
   
   // Guild Battles
   guildBattles: GuildBattle[];
@@ -620,11 +661,19 @@ export interface GameState {
   // Territory Functions
   claimTerritory: (territoryId: string, guildId: string) => void;
   unlockRoyalSpire: () => void;
+  checkRoyalSpireUnlock: () => void;
   
   // Guild Battle Functions
   initiateGuildBattle: (territoryId: string, attackingGuildId: string) => void;
   joinGuildBattle: (battleId: string, side: 'attacker' | 'defender') => void;
   startGuildBattle: (battleId: string) => void;
+  
+  // Royal Guild Functions
+  assignGuildRole: (guildId: string, characterId: string, role: GuildRole) => void;
+  removeGuildRole: (guildId: string, characterId: string) => void;
+  getGuildRoleInfo: (role: GuildRole) => GuildRoleInfo;
+  applyRoyalBuffs: (characterId: string) => void;
+  removeRoyalBuffs: (characterId: string) => void;
   
   // Inventory Functions
   addItem: (item: Item) => void;

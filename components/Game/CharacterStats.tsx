@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import { Character } from '@/types/game';
+import { Character, GuildRole } from '@/types/game';
 import colors from '@/constants/colors';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -8,9 +8,10 @@ const isTablet = screenWidth > 768;
 
 interface CharacterStatsProps {
   character: Character;
+  getGuildRoleInfo?: (role: GuildRole) => { emoji: string; buffs: { [key: string]: number }; description: string };
 }
 
-export default function CharacterStats({ character }: CharacterStatsProps) {
+export default function CharacterStats({ character, getGuildRoleInfo }: CharacterStatsProps) {
   // Ensure stats object exists
   const stats = character.stats || {
     strength: 0,
@@ -122,9 +123,42 @@ export default function CharacterStats({ character }: CharacterStatsProps) {
   // Check if buffs and debuffs exist and have length before rendering status section
   const hasStatusEffects = (buffs && buffs.length > 0) || (debuffs && debuffs.length > 0);
   
+  // Get royal buffs if character has a guild role
+  const getRoyalBuffs = () => {
+    if (!character.guildRole || character.guildRole === 'Member' || !getGuildRoleInfo) {
+      return null;
+    }
+    
+    const roleInfo = getGuildRoleInfo(character.guildRole);
+    return roleInfo;
+  };
+  
+  const royalBuffs = getRoyalBuffs();
+  
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Character Stats</Text>
+      
+      {/* Royal Buffs Section */}
+      {royalBuffs && (
+        <View style={styles.royalBuffsSection}>
+          <Text style={styles.royalBuffsTitle}>
+            {royalBuffs.emoji} Royal {character.guildRole} Buffs
+          </Text>
+          <Text style={styles.royalBuffsDescription}>
+            {royalBuffs.description}
+          </Text>
+          <View style={styles.royalBuffsList}>
+            {Object.entries(royalBuffs.buffs).map(([stat, value]) => (
+              <View key={stat} style={styles.royalBuffItem}>
+                <Text style={styles.royalBuffText}>
+                  +{value} {stat.charAt(0).toUpperCase() + stat.slice(1)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
       
       {/* Primary Stats */}
       <View style={styles.statsGrid}>
@@ -281,6 +315,44 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: 16,
     textAlign: 'center',
+  },
+  royalBuffsSection: {
+    backgroundColor: colors.royal + '20',
+    borderRadius: 12,
+    padding: isTablet ? 16 : 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.royal,
+  },
+  royalBuffsTitle: {
+    fontSize: isTablet ? 18 : 16,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  royalBuffsDescription: {
+    fontSize: isTablet ? 12 : 10,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  royalBuffsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  royalBuffItem: {
+    backgroundColor: colors.royal,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  royalBuffText: {
+    fontSize: isTablet ? 12 : 10,
+    color: colors.text,
+    fontWeight: 'bold',
   },
   statsGrid: {
     flexDirection: 'row',

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, Dimensions } from 'react-native';
 import colors from '@/constants/colors';
+import { GuildRole } from '@/types/game';
 
 const { width: screenWidth } = Dimensions.get('window');
 const isTablet = screenWidth > 768;
@@ -45,6 +46,7 @@ interface CombatParticipant {
   imageUrl?: string; // For NPCs
   customRace?: { name: string };
   customClass?: { name: string };
+  guildRole?: GuildRole;
 }
 
 interface ReactivePlayerCardProps {
@@ -105,6 +107,21 @@ export default function ReactivePlayerCard({ participant, isActive, isAnimating 
       return capitalizeFirstLetter(participant.customClass.name) || "Custom Class";
     }
     return capitalizeFirstLetter(participant.class) || "";
+  };
+  
+  // Get guild role emoji
+  const getGuildRoleEmoji = (): string => {
+    if (!participant.guildRole || participant.guildRole === 'Member') return '';
+    
+    const roleEmojis: Record<GuildRole, string> = {
+      King: '👑',
+      Queen: '👸',
+      Knight: '⚔️',
+      Bishop: '🛡️',
+      Member: ''
+    };
+    
+    return roleEmojis[participant.guildRole] || '';
   };
   
   // Format dice roll for display
@@ -191,9 +208,14 @@ export default function ReactivePlayerCard({ participant, isActive, isAnimating 
         )}
         
         <View style={styles.nameOverlay}>
-          <Text style={styles.characterName} numberOfLines={1}>
-            {participant.name || "Unknown"}
-          </Text>
+          <View style={styles.nameContainer}>
+            <Text style={styles.characterName} numberOfLines={1}>
+              {participant.name || "Unknown"}
+            </Text>
+            {getGuildRoleEmoji() && (
+              <Text style={styles.guildRoleEmoji}>{getGuildRoleEmoji()}</Text>
+            )}
+          </View>
           {participant.level && (
             <Text style={styles.characterLevel}>
               Lv.{participant.level}
@@ -412,10 +434,22 @@ const styles = StyleSheet.create({
     left: 6,
     maxWidth: '65%',
   },
+  nameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   characterName: {
     fontSize: isTablet ? 13 : 11, // Slightly smaller for better fit
     fontWeight: 'bold',
     color: colors.text,
+    textShadowColor: 'rgba(0, 0, 0, 0.9)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+    flex: 1,
+  },
+  guildRoleEmoji: {
+    fontSize: isTablet ? 12 : 10,
     textShadowColor: 'rgba(0, 0, 0, 0.9)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
