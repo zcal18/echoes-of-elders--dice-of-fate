@@ -210,59 +210,58 @@ export default function ShopScreen() {
         {selectedCategory === 'items' ? (
           <View style={styles.itemGrid}>
             {filteredItems.map(item => (
-              <TouchableOpacity
+              <View
                 key={item.id}
                 style={[
                   styles.itemCard,
                   !canAffordItem(item) && styles.unaffordableItem
                 ]}
-                onPress={() => handlePurchase(item)}
-                disabled={!canAffordItem(item) || item.stock === 0}
               >
-                <View style={styles.itemHeader}>
-                  <Text 
-                    style={[
-                      styles.itemName,
-                      { color: getRarityColor(item.item.rarity || 'common') }
-                    ]}
-                  >
-                    {item.item.name}
-                  </Text>
-                </View>
-                
-                <Text style={styles.itemDescription} numberOfLines={2}>
-                  {item.item.description}
-                </Text>
-                
-                <View style={styles.itemStats}>
-                  <Text style={styles.itemType}>
-                    {item.item.type.charAt(0).toUpperCase() + item.item.type.slice(1)}
-                  </Text>
-                  <Text style={styles.itemRarity}>
-                    {item.item.rarity ? (item.item.rarity.charAt(0).toUpperCase() + item.item.rarity.slice(1)) : 'Common'}
-                  </Text>
-                </View>
-                
-                <View style={styles.itemFooter}>
-                  <Text style={[
-                    styles.itemPrice,
-                    !canAffordItem(item) && styles.unaffordablePrice
-                  ]}>
-                    💰 {item.price * purchaseQuantity}
-                  </Text>
-                  <Text style={[
-                    styles.itemStock,
-                    item.stock <= 5 && styles.lowStock
-                  ]}>
-                    Stock: {item.stock}
-                  </Text>
-                </View>
-                
-                {item.stock === 0 && (
-                  <View style={styles.outOfStockOverlay}>
-                    <Text style={styles.outOfStockText}>OUT OF STOCK</Text>
+                <TouchableOpacity
+                  style={styles.itemContent}
+                  onPress={() => handlePurchase(item)}
+                  disabled={!canAffordItem(item) || item.stock === 0}
+                >
+                  <View style={styles.itemHeader}>
+                    <Text 
+                      style={[
+                        styles.itemName,
+                        { color: getRarityColor(item.item.rarity || 'common') }
+                      ]}
+                    >
+                      {item.item.name}
+                    </Text>
                   </View>
-                )}
+                  
+                  <Text style={styles.itemDescription} numberOfLines={2}>
+                    {item.item.description}
+                  </Text>
+                  
+                  <View style={styles.itemStats}>
+                    <Text style={styles.itemType}>
+                      {item.item.type.charAt(0).toUpperCase() + item.item.type.slice(1)}
+                    </Text>
+                    <Text style={styles.itemRarity}>
+                      {item.item.rarity ? (item.item.rarity.charAt(0).toUpperCase() + item.item.rarity.slice(1)) : 'Common'}
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.itemFooter}>
+                    <Text style={[
+                      styles.itemPrice,
+                      !canAffordItem(item) && styles.unaffordablePrice
+                    ]}>
+                      💰 {item.price * purchaseQuantity}
+                    </Text>
+                    <Text style={[
+                      styles.itemStock,
+                      item.stock <= 5 && styles.lowStock
+                    ]}>
+                      Stock: {item.stock}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+                
                 <TouchableOpacity
                   style={[
                     styles.quickBuyButton,
@@ -273,7 +272,13 @@ export default function ShopScreen() {
                 >
                   <Text style={styles.quickBuyText}>Buy 1</Text>
                 </TouchableOpacity>
-              </TouchableOpacity>
+                
+                {item.stock === 0 && (
+                  <View style={styles.outOfStockOverlay}>
+                    <Text style={styles.outOfStockText}>OUT OF STOCK</Text>
+                  </View>
+                )}
+              </View>
             ))}
           </View>
         ) : (
@@ -415,7 +420,6 @@ const styles = StyleSheet.create({
     width: isTablet ? '48%' : '48%',
     backgroundColor: colors.surface,
     borderRadius: 16,
-    padding: isTablet ? 16 : 12,
     borderWidth: 2,
     borderColor: 'transparent',
     position: 'relative',
@@ -424,6 +428,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+  },
+  itemContent: {
+    padding: isTablet ? 16 : 12,
   },
   unaffordableItem: {
     opacity: 0.6,
