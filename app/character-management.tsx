@@ -10,7 +10,7 @@ const isTablet = screenWidth > 768;
 
 export default function CharacterManagementScreen() {
   const router = useRouter();
-  const { characters, activeCharacter, selectCharacter, deleteCharacter } = useGameStore();
+  const { characters, activeCharacter, setActiveCharacter, deleteCharacter } = useGameStore();
   const [deletingCharacterId, setDeletingCharacterId] = useState<string | null>(null);
 
   const handleDeleteCharacter = (characterId: string, characterName: string) => {
@@ -36,7 +36,7 @@ export default function CharacterManagementScreen() {
   };
 
   const handleSelectCharacter = (characterId: string) => {
-    selectCharacter(characterId);
+    setActiveCharacter(characterId);
     router.back();
   };
 
