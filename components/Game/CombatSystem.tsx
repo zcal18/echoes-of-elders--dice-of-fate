@@ -350,24 +350,38 @@ export default function CombatSystem() {
     
     Alert.alert(
       'Force Advance Turn',
-      'This will force the enemy to take their turn immediately. Use this if the game seems stuck.',
+      'This will force the combat to advance to the next turn. Use this if the game seems stuck.',
       [
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Advance', 
           style: 'destructive',
           onPress: () => {
+            // Log the manual advancement
             setCombatLog(prev => [`⚡ Turn advanced manually!`, ...prev]);
+            
+            // Reset all waiting states
             setWaitingForEnemyTurn(false);
             
+            // Determine what to do based on current state
             if (!playerTurn) {
-              // If it's enemy turn, force them to attack
-              performEnemyAttack(selectedEnemy);
+              // If it's supposed to be enemy turn, force enemy attack
+              try {
+                performEnemyAttack(selectedEnemy);
+              } catch (error) {
+                console.error('Error during forced enemy attack:', error);
+                // If enemy attack fails, give turn back to player
+                setPlayerTurn(true);
+                setCombatLog(prev => [`⚠️ Enemy turn failed, returning to player turn`, ...prev]);
+              }
             } else {
-              // If it's player turn but something is stuck, just ensure it's player turn
+              // If it's supposed to be player turn but something is stuck
               setPlayerTurn(true);
-              setWaitingForEnemyTurn(false);
+              setCombatLog(prev => [`🔄 Player turn restored`, ...prev]);
             }
+            
+            // Add notification for user feedback
+            addNotification('Combat turn advanced manually', 'info');
           }
         }
       ]
@@ -663,18 +677,16 @@ export default function CombatSystem() {
           </TouchableOpacity>
         </View>
         
-        {/* Gold Advance Button - Only show when not player turn or when waiting */}
-        {(!playerTurn || waitingForEnemyTurn) && (
-          <View style={styles.advanceButtonContainer}>
-            <TouchableOpacity 
-              style={styles.goldAdvanceButton}
-              onPress={forceAdvanceEnemyTurn}
-            >
-              <FastForward size={16} color="#000" />
-              <Text style={styles.goldAdvanceButtonText}>Force Advance Turn</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* Force Advance Button - Always show when in combat */}
+        <View style={styles.advanceButtonContainer}>
+          <TouchableOpacity 
+            style={styles.goldAdvanceButton}
+            onPress={forceAdvanceEnemyTurn}
+          >
+            <FastForward size={16} color="#000" />
+            <Text style={styles.goldAdvanceButtonText}>Force Advance Turn</Text>
+          </TouchableOpacity>
+        </View>
         
         {!playerTurn && !waitingForEnemyTurn && (
           <Text style={styles.turnIndicator}>Enemy's Turn...</Text>
