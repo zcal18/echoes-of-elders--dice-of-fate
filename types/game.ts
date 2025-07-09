@@ -179,6 +179,42 @@ export interface Enemy {
   lore?: string;
 }
 
+// Admin Enemy Editor types
+export interface EnemyEditorData {
+  id?: string;
+  name: string;
+  description: string;
+  level: number;
+  requiredLevel: number;
+  maxHealth: number;
+  attack: number;
+  defense: number;
+  experience: number;
+  gold: number;
+  difficulty: 'normal' | 'elite' | 'boss' | 'legendary' | 'mythic';
+  stats: {
+    strength: number;
+    dexterity: number;
+    constitution: number;
+    intelligence: number;
+    wisdom: number;
+    charisma: number;
+  };
+  armorClass: number;
+  damageDie: number;
+  attacks: Array<{
+    name: string;
+    damage: string;
+    description: string;
+  }>;
+  abilities: string[];
+  weaknesses: string[];
+  resistances: string[];
+  profileImage: string;
+  environment: string;
+  lore: string;
+}
+
 // Race and Class types
 export interface Race {
   id: string;
@@ -485,6 +521,24 @@ export interface CombatParticipant {
   };
 }
 
+// Admin types
+export interface AdminUser {
+  id: string;
+  username: string;
+  role: 'admin' | 'moderator';
+  permissions: string[];
+  createdAt: number;
+}
+
+export interface BannedUser {
+  userId: string;
+  username: string;
+  reason: string;
+  bannedAt: number;
+  bannedBy: string;
+  isActive: boolean;
+}
+
 // Main game state
 export interface GameState {
   // Authentication
@@ -539,6 +593,10 @@ export interface GameState {
   pvpQueue: PvpPlayer[];
   activePvpMatch: PvpMatch | null;
   pvpRanking: number;
+  
+  // Admin State
+  bannedUsers: string[];
+  customEnemies: Enemy[];
   
   // Notification system
   notifications: Notification[];
@@ -644,6 +702,7 @@ export interface GameState {
   addReactionToMessage: (messageId: string, emoji: string) => void;
   kickFromChat: (userId: string, lobbyId: string) => void;
   banUser: (userId: string, reason: string) => void;
+  unbanUser: (userId: string) => void;
   
   // Chat Pop-out Functions
   setChatPopout: (isPopout: boolean) => void;
@@ -652,6 +711,14 @@ export interface GameState {
   connectToChat: (userId: string, userName: string) => void;
   disconnectFromChat: (userId: string) => void;
   updateUserPresence: (userId: string, isOnline: boolean, channelId?: string) => void;
+  
+  // Admin Functions
+  createEnemy: (enemyData: EnemyEditorData) => boolean;
+  updateEnemy: (enemyId: string, enemyData: EnemyEditorData) => boolean;
+  deleteEnemy: (enemyId: string) => boolean;
+  uploadEnemyImage: (enemyId: string, imageUrl: string) => boolean;
+  getAllEnemiesForAdmin: () => Enemy[];
+  setUserRole: (username: string, role: 'player' | 'moderator' | 'admin') => void;
   
   addNotification: (message: string, type?: 'success' | 'error' | 'info') => void;
   removeNotification: (id: string) => void;

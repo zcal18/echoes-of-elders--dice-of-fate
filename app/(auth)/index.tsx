@@ -79,6 +79,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
+    marginBottom: 40, // Additional line break before footer
   },
   description: {
     fontSize: 16,

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GameState, ChatMessage, ChatLobby, Character, ShopItem, Enemy, FamiliarType, Item, Guild, Party, Friend, CreateCharacterInput, Territory, Mail, Research, PvpPlayer, PvpMatch, OnlineUser, GuildBattle } from '@/types/game';
+import { GameState, ChatMessage, ChatLobby, Character, ShopItem, Enemy, FamiliarType, Item, Guild, Party, Friend, CreateCharacterInput, Territory, Mail, Research, PvpPlayer, PvpMatch, OnlineUser, GuildBattle, EnemyEditorData } from '@/types/game';
 import { shopItems } from '@/constants/items';
 import { getAllEnemies } from '@/constants/enemies';
 import { races, classes, spells } from '@/constants/gameData';
@@ -351,6 +351,10 @@ export const useGameStore = create<GameState>()(
       activePvpMatch: null,
       pvpRanking: 1000,
       
+      // Admin State
+      bannedUsers: [],
+      customEnemies: [],
+      
       // Notification system (not persisted)
       notifications: [],
       
@@ -358,10 +362,20 @@ export const useGameStore = create<GameState>()(
       login: (username: string) => {
         const { characters } = get();
         
-        set({
-          isAuthenticated: true,
-          username
-        });
+        // Check for admin account
+        if (username.toLowerCase() === 'admin') {
+          set({
+            isAuthenticated: true,
+            username: 'admin',
+            userRole: 'admin'
+          });
+        } else {
+          set({
+            isAuthenticated: true,
+            username,
+            userRole: 'player'
+          });
+        }
         
         // Auto-select first character if available and no active character
         if (characters.length > 0 && !get().activeCharacter) {
@@ -571,7 +585,9 @@ export const useGameStore = create<GameState>()(
               sender: "Generous Lord",
               recipient: newCharacter.name,
               subject: "Welcome to the Realm",
-              message: "Greetings, brave soul. Welcome to this realm of adventure and danger. As a token of my generosity, I bestow upon you 500 gold to aid in your journey. But beware, not everything comes without cost. A time may come when a debt is owed. Tread carefully.\n\n- A Generous Lord",
+              message: "Greetings, brave soul. Welcome to this realm of adventure and danger. As a token of my generosity, I bestow upon you 500 gold to aid in your journey. But beware, not everything comes without cost. A time may come when a debt is owed. Tread carefully.
+
+- A Generous Lord",
               timestamp: Date.now(),
               isRead: false,
               isStarred: false
@@ -1210,8 +1226,8 @@ export const useGameStore = create<GameState>()(
         const character = get().activeCharacter;
         if (!character) return [];
         
-        // Get all enemies from the fragmented system
-        const allEnemies = getAllEnemies();
+        // Get all enemies from the fragmented system and custom enemies
+        const allEnemies = [...getAllEnemies(), ...get().customEnemies];
         
         // Filter enemies based on character level (show enemies within reasonable range)
         const availableEnemies = allEnemies.filter((enemy: Enemy) => 
@@ -1840,21 +1856,28 @@ export const useGameStore = create<GameState>()(
             const spellUnlocks = rewards.unlocks.filter(u => u.startsWith('spell:')).map(u => u.split(':')[1]);
             const itemUnlocks = rewards.unlocks.filter(u => u.startsWith('item:')).map(u => u.split(':')[1]);
             
-            let mailContent = `Your research on ${research.name} has yielded valuable results!\n\n`;
+            let mailContent = `Your research on ${research.name} has yielded valuable results!
+
+`;
             
             if (spellUnlocks.length > 0) {
-              mailContent += "Spells Unlocked:\n";
+              mailContent += "Spells Unlocked:
+";
               spellUnlocks.forEach(spellId => {
                 const spell = spells.find(s => s.id === spellId);
-                mailContent += `- ${spell ? spell.name : spellId}\n`;
+                mailContent += `- ${spell ? spell.name : spellId}
+`;
               });
-              mailContent += "\n";
+              mailContent += "
+";
             }
             
             if (itemUnlocks.length > 0) {
-              mailContent += "Items Unlocked:\n";
+              mailContent += "Items Unlocked:
+";
               itemUnlocks.forEach(itemId => {
-                mailContent += `- ${itemId === 'crafting_kit' ? 'Basic Crafting Kit' : 'Artisan Tools'}\n`;
+                mailContent += `- ${itemId === 'crafting_kit' ? 'Basic Crafting Kit' : 'Artisan Tools'}
+`;
               });
             }
             
@@ -2174,7 +2197,25 @@ export const useGameStore = create<GameState>()(
       },
       
       banUser: (userId: string, reason: string) => {
-        // Implementation for banning a user
+        const { userRole, isAuthenticated } = get();
+        if (!isAuthenticated || userRole !== 'admin') return;
+        
+        set((state: GameState) => ({
+          bannedUsers: [...state.bannedUsers, userId]
+        }));
+        
+        get().addNotification(`User ${userId} has been banned: ${reason}`, 'success');
+      },
+      
+      unbanUser: (userId: string) => {
+        const { userRole, isAuthenticated } = get();
+        if (!isAuthenticated || userRole !== 'admin') return;
+        
+        set((state: GameState) => ({
+          bannedUsers: state.bannedUsers.filter(id => id !== userId)
+        }));
+        
+        get().addNotification(`User ${userId} has been unbanned`, 'success');
       },
       
       // Chat Pop-out Functions
@@ -2224,6 +2265,156 @@ export const useGameStore = create<GameState>()(
         }));
       },
       
+      // Admin Functions
+      createEnemy: (enemyData: EnemyEditorData) => {
+        const { userRole, isAuthenticated } = get();
+        if (!isAuthenticated || userRole !== 'admin') {
+          get().addNotification('Admin access required', 'error');
+          return false;
+        }
+        
+        const newEnemy: Enemy = {
+          id: enemyData.id || `custom_${Date.now()}`,
+          name: enemyData.name,
+          description: enemyData.description,
+          level: enemyData.level,
+          requiredLevel: enemyData.requiredLevel,
+          health: { max: enemyData.maxHealth },
+          maxHealth: enemyData.maxHealth,
+          currentHealth: enemyData.maxHealth,
+          attack: enemyData.attack,
+          defense: enemyData.defense,
+          experience: enemyData.experience,
+          gold: enemyData.gold,
+          difficulty: enemyData.difficulty,
+          stats: enemyData.stats,
+          armorClass: enemyData.armorClass,
+          damageDie: enemyData.damageDie,
+          attacks: enemyData.attacks,
+          abilities: enemyData.abilities,
+          weaknesses: enemyData.weaknesses,
+          resistances: enemyData.resistances,
+          profileImage: enemyData.profileImage,
+          environment: enemyData.environment,
+          lore: enemyData.lore,
+          loot: {
+            experience: enemyData.experience,
+            gold: { min: Math.floor(enemyData.gold * 0.8), max: Math.floor(enemyData.gold * 1.2) },
+            items: []
+          }
+        };
+        
+        set((state: GameState) => ({
+          customEnemies: [...state.customEnemies, newEnemy]
+        }));
+        
+        get().addNotification(`Enemy "${enemyData.name}" created successfully!`, 'success');
+        return true;
+      },
+      
+      updateEnemy: (enemyId: string, enemyData: EnemyEditorData) => {
+        const { userRole, isAuthenticated } = get();
+        if (!isAuthenticated || userRole !== 'admin') {
+          get().addNotification('Admin access required', 'error');
+          return false;
+        }
+        
+        set((state: GameState) => ({
+          customEnemies: state.customEnemies.map(enemy =>
+            enemy.id === enemyId
+              ? {
+                  ...enemy,
+                  name: enemyData.name,
+                  description: enemyData.description,
+                  level: enemyData.level,
+                  requiredLevel: enemyData.requiredLevel,
+                  maxHealth: enemyData.maxHealth,
+                  currentHealth: enemyData.maxHealth,
+                  health: { max: enemyData.maxHealth },
+                  attack: enemyData.attack,
+                  defense: enemyData.defense,
+                  experience: enemyData.experience,
+                  gold: enemyData.gold,
+                  difficulty: enemyData.difficulty,
+                  stats: enemyData.stats,
+                  armorClass: enemyData.armorClass,
+                  damageDie: enemyData.damageDie,
+                  attacks: enemyData.attacks,
+                  abilities: enemyData.abilities,
+                  weaknesses: enemyData.weaknesses,
+                  resistances: enemyData.resistances,
+                  profileImage: enemyData.profileImage,
+                  environment: enemyData.environment,
+                  lore: enemyData.lore,
+                  loot: {
+                    experience: enemyData.experience,
+                    gold: { min: Math.floor(enemyData.gold * 0.8), max: Math.floor(enemyData.gold * 1.2) },
+                    items: enemy.loot.items || []
+                  }
+                }
+              : enemy
+          )
+        }));
+        
+        get().addNotification(`Enemy "${enemyData.name}" updated successfully!`, 'success');
+        return true;
+      },
+      
+      deleteEnemy: (enemyId: string) => {
+        const { userRole, isAuthenticated } = get();
+        if (!isAuthenticated || userRole !== 'admin') {
+          get().addNotification('Admin access required', 'error');
+          return false;
+        }
+        
+        const enemy = get().customEnemies.find(e => e.id === enemyId);
+        if (!enemy) {
+          get().addNotification('Enemy not found', 'error');
+          return false;
+        }
+        
+        set((state: GameState) => ({
+          customEnemies: state.customEnemies.filter(e => e.id !== enemyId)
+        }));
+        
+        get().addNotification(`Enemy "${enemy.name}" deleted successfully!`, 'success');
+        return true;
+      },
+      
+      uploadEnemyImage: (enemyId: string, imageUrl: string) => {
+        const { userRole, isAuthenticated } = get();
+        if (!isAuthenticated || userRole !== 'admin') {
+          get().addNotification('Admin access required', 'error');
+          return false;
+        }
+        
+        set((state: GameState) => ({
+          customEnemies: state.customEnemies.map(enemy =>
+            enemy.id === enemyId
+              ? { ...enemy, profileImage: imageUrl }
+              : enemy
+          )
+        }));
+        
+        get().addNotification('Enemy image updated successfully!', 'success');
+        return true;
+      },
+      
+      getAllEnemiesForAdmin: () => {
+        const { userRole, isAuthenticated } = get();
+        if (!isAuthenticated || userRole !== 'admin') return [];
+        
+        return [...getAllEnemies(), ...get().customEnemies];
+      },
+      
+      setUserRole: (username: string, role: 'player' | 'moderator' | 'admin') => {
+        const { userRole, isAuthenticated } = get();
+        if (!isAuthenticated || userRole !== 'admin') return;
+        
+        // In a real app, this would update the user's role in the database
+        get().addNotification(`User ${username} role updated to ${role}`, 'success');
+      },
+      
       addNotification: (message: string, type: 'success' | 'error' | 'info' = 'info') => {
         const notification = {
           id: Date.now().toString(),
@@ -2262,6 +2453,8 @@ export const useGameStore = create<GameState>()(
           pvpRanking: state.pvpRanking,
           mailbox: state.mailbox,
           username: state.username, // Keep username for next login
+          customEnemies: state.customEnemies, // Keep custom enemies
+          bannedUsers: state.bannedUsers, // Keep banned users
           
           // Clear session-only data
           isAuthenticated: false,
@@ -2354,7 +2547,11 @@ export const useGameStore = create<GameState>()(
         pvpRanking: state.pvpRanking,
         
         // Mail System - ALWAYS PERSIST
-        mailbox: state.mailbox
+        mailbox: state.mailbox,
+        
+        // Admin Data - ALWAYS PERSIST
+        customEnemies: state.customEnemies,
+        bannedUsers: state.bannedUsers
       }),
       
       onRehydrateStorage: () => (state, error) => {
@@ -2423,6 +2620,10 @@ export const useGameStore = create<GameState>()(
           state.friendsList = [];
           state.onlineFriends = [];
           state.userRole = 'player';
+          
+          // Initialize admin data if not present
+          if (!state.customEnemies) state.customEnemies = [];
+          if (!state.bannedUsers) state.bannedUsers = [];
           
           // IMPORTANT: Don't auto-authenticate but keep username for login convenience
           state.isAuthenticated = false;

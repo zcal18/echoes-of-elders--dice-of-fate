@@ -10,16 +10,13 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
+        tabBarShowLabel: false, // Remove icon text
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.cardBorder,
           height: Platform.OS === 'ios' ? 88 : 64,
           paddingBottom: Platform.OS === 'ios' ? 20 : 8,
           paddingTop: 8,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
         },
         headerStyle: {
           backgroundColor: colors.surface,

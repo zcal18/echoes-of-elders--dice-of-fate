@@ -21,7 +21,8 @@ export const createContext = async (opts: FetchCreateContextFnOptions) => {
     user: userId ? {
       id: userId,
       name: userName || 'Unknown',
-      isAuthenticated: true
+      isAuthenticated: true,
+      isAdmin: userId === 'admin' || userName === 'admin'
     } : null,
     // Add WebSocket context if needed
     ws: null,
@@ -36,7 +37,8 @@ export const createWSContext = async (opts: { ws?: any; userId?: string; userNam
     user: opts.userId ? {
       id: opts.userId,
       name: opts.userName || 'Unknown',
-      isAuthenticated: true
+      isAuthenticated: true,
+      isAdmin: opts.userId === 'admin' || opts.userName === 'admin'
     } : null,
   };
 };
@@ -57,7 +59,8 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
   console.log('Protected procedure check:', {
     hasUser: !!ctx.user,
     isAuthenticated: ctx.user?.isAuthenticated,
-    userId: ctx.user?.id
+    userId: ctx.user?.id,
+    isAdmin: ctx.user?.isAdmin
   });
   
   // Check if user is authenticated
@@ -69,6 +72,26 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
     ctx: {
       ...ctx,
       user: ctx.user, // Ensure user is available in protected procedures
+    },
+  });
+});
+
+// Admin procedure for admin-only actions
+export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  console.log('Admin procedure check:', {
+    userId: ctx.user?.id,
+    isAdmin: ctx.user?.isAdmin
+  });
+  
+  // Check if user is admin
+  if (!ctx.user?.isAdmin) {
+    throw new Error('Admin access required');
+  }
+  
+  return next({
+    ctx: {
+      ...ctx,
+      user: ctx.user,
     },
   });
 });
