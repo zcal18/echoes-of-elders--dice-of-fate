@@ -56,6 +56,20 @@ const colors = {
   legendary: '#F59E0B',
   mythic: '#EF4444',
   
+  // Territory colors
+  water: '#0EA5E9',
+  waterLight: '#38BDF8',
+  forest: '#16A34A',
+  forestLight: '#4ADE80',
+  mountain: '#6B7280',
+  mountainLight: '#9CA3AF',
+  desert: '#D97706',
+  desertLight: '#F59E0B',
+  castle: '#7C3AED',
+  castleLight: '#A855F7',
+  royal: '#DC2626',
+  royalLight: '#F87171',
+  
   // Transparent overlays
   overlay: 'rgba(0, 0, 0, 0.5)',
   overlayLight: 'rgba(0, 0, 0, 0.3)',
