@@ -296,7 +296,7 @@ export const useGameStore = create<GameState>()(
         {
           id: 'general',
           name: 'General',
-          description: 'Main chat room for all players',
+          description: 'Kingdom Chat',
           type: 'default',
           createdAt: Date.now(),
           members: [],
@@ -2472,7 +2472,7 @@ export const useGameStore = create<GameState>()(
             {
               id: 'general',
               name: 'General',
-              description: 'Main chat room for all players',
+              description: 'Kingdom Chat',
               type: 'default',
               createdAt: Date.now(),
               members: [],
@@ -2559,7 +2559,7 @@ export const useGameStore = create<GameState>()(
             {
               id: 'general',
               name: 'General',
-              description: 'Main chat room for all players',
+              description: 'Kingdom Chat',
               type: 'default',
               createdAt: Date.now(),
               members: [],
