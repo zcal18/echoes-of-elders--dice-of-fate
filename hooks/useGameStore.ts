@@ -454,6 +454,7 @@ export const useGameStore = create<GameState>()(
             get().autoJoinGuildChat(firstCharacter.guildId);
           }
           
+          // Only show one welcome notification during login
           get().addNotification(`Welcome back, ${firstCharacter.name}!`, 'success');
         } else if (characters.length === 0) {
           get().addNotification('Welcome! Create your first character to begin your adventure.', 'info');
@@ -737,6 +738,7 @@ export const useGameStore = create<GameState>()(
             get().autoJoinGuildChat(character.guildId);
           }
           
+          // Only show notification when manually switching characters (not during login)
           get().addNotification(`Switched to ${character.name}`, 'success');
         }
       },
