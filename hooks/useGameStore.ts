@@ -356,10 +356,43 @@ export const useGameStore = create<GameState>()(
       
       // Authentication Functions
       login: (username: string) => {
+        const { characters } = get();
+        
         set({
           isAuthenticated: true,
           username
         });
+        
+        // Auto-select first character if available and no active character
+        if (characters.length > 0 && !get().activeCharacter) {
+          const firstCharacter = characters[0];
+          // Ensure all character properties exist when selecting
+          const updatedCharacter = {
+            ...firstCharacter,
+            inventory: firstCharacter.inventory || [],
+            equipment: firstCharacter.equipment || {},
+            buffs: firstCharacter.buffs || [],
+            debuffs: firstCharacter.debuffs || [],
+            unlockedSpells: firstCharacter.unlockedSpells || [],
+            unlockedItems: firstCharacter.unlockedItems || [],
+            // Ensure combat properties exist
+            currentHealth: firstCharacter.currentHealth || firstCharacter.health?.current || firstCharacter.maxHealth || 50,
+            maxHealth: firstCharacter.maxHealth || firstCharacter.health?.max || 50,
+            armorClass: firstCharacter.armorClass || 10,
+            damageDie: firstCharacter.damageDie || 4
+          };
+          
+          set({ activeCharacter: updatedCharacter });
+          
+          // Auto-join guild chat if character is in a guild
+          if (firstCharacter.guildId) {
+            get().autoJoinGuildChat(firstCharacter.guildId);
+          }
+          
+          get().addNotification(`Welcome back, ${firstCharacter.name}!`, 'success');
+        } else if (characters.length === 0) {
+          get().addNotification('Welcome! Create your first character to begin your adventure.', 'info');
+        }
       },
       
       // Character Functions
@@ -638,6 +671,8 @@ export const useGameStore = create<GameState>()(
           if (character.guildId) {
             get().autoJoinGuildChat(character.guildId);
           }
+          
+          get().addNotification(`Switched to ${character.name}`, 'success');
         }
       },
       
@@ -2216,7 +2251,7 @@ export const useGameStore = create<GameState>()(
       
       // Admin Functions
       logout: () => {
-        // FIXED: Don't clear character data on logout - only clear session data
+        // Clear session data but keep persistent character data
         set((state: GameState) => ({
           // Keep character data persistent
           characters: state.characters,
@@ -2226,10 +2261,10 @@ export const useGameStore = create<GameState>()(
           activeResearch: state.activeResearch,
           pvpRanking: state.pvpRanking,
           mailbox: state.mailbox,
+          username: state.username, // Keep username for next login
           
           // Clear session-only data
           isAuthenticated: false,
-          username: '',
           activeCharacter: null,
           userRole: 'player',
           activeChannel: 'general',
@@ -2389,8 +2424,7 @@ export const useGameStore = create<GameState>()(
           state.onlineFriends = [];
           state.userRole = 'player';
           
-          // IMPORTANT: Don't auto-authenticate or set active character
-          // Let the user log in again, but their characters will be preserved
+          // IMPORTANT: Don't auto-authenticate but keep username for login convenience
           state.isAuthenticated = false;
           state.activeCharacter = null;
         }

@@ -3,9 +3,9 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert,
 import { useGameStore } from '@/hooks/useGameStore';
 import colors from '@/constants/colors';
 import { ChatMessage, ChatLobby, OnlineUser } from '@/types/game';
-import { MessageSquare, Plus, X, ChevronLeft, ChevronRight, Smile, ExternalLink, Minimize2, Users, Type, Palette, Activity, Send, Menu } from 'lucide-react-native';
+import { MessageSquare, Plus, X, ChevronLeft, ChevronRight, Smile, ExternalLink, Minimize2, Users, Type, Palette, Activity, Send, Menu, Wifi, WifiOff, AlertCircle } from 'lucide-react-native';
 import { trpc, setAuthInfo } from '@/lib/trpc';
-import { connectWebSocket, disconnectWebSocket, sendWebSocketMessage, getWebSocketConnection, getWebSocketStatus } from '@/lib/trpc';
+import { connectWebSocket, disconnectWebSocket, sendWebSocketMessage, getWebSocketConnection, getWebSocketStatus, addConnectionStatusListener } from '@/lib/trpc';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const isTablet = screenWidth > 768;
@@ -72,6 +72,7 @@ export default function ChatSystem() {
   const [selectedColor, setSelectedColor] = useState(TEXT_COLORS[0].value);
   const [isEmoteMode, setIsEmoteMode] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<string>('disconnected');
+  const [connectionRetries, setConnectionRetries] = useState(0);
   
   const scrollViewRef = useRef<ScrollView>(null);
   const textInputRef = useRef<TextInput>(null);
@@ -107,16 +108,22 @@ export default function ChatSystem() {
     }
   }, [activeCharacter, isAuthenticated]);
   
-  // Monitor connection status
+  // Monitor connection status with improved listener
   useEffect(() => {
-    const updateStatus = () => {
-      const status = getWebSocketStatus();
-      setConnectionStatus(status);
-    };
+    if (Platform.OS !== 'web') return;
     
-    updateStatus();
-    const interval = setInterval(updateStatus, 1000);
-    return () => clearInterval(interval);
+    const removeListener = addConnectionStatusListener((status) => {
+      setConnectionStatus(status);
+      
+      // Reset retry count on successful connection
+      if (status === 'connected') {
+        setConnectionRetries(0);
+      } else if (status === 'error' || status === 'failed') {
+        setConnectionRetries(prev => prev + 1);
+      }
+    });
+    
+    return removeListener;
   }, []);
   
   // Connect to WebSocket when component mounts and user is authenticated
@@ -164,39 +171,12 @@ export default function ChatSystem() {
         };
         
         ws.onerror = (event) => {
-          // Improved error logging to extract actual error details
-          let errorMessage = 'Unknown WebSocket error';
-          
-          if (event instanceof ErrorEvent) {
-            errorMessage = event.message || event.error?.toString() || 'ErrorEvent occurred';
-          } else if (event && typeof event === 'object') {
-            // Try to extract meaningful error information
-            if ('message' in event) {
-              errorMessage = String(event.message);
-            } else if ('error' in event) {
-              errorMessage = String(event.error);
-            } else if ('type' in event) {
-              errorMessage = `WebSocket ${event.type} event`;
-            } else {
-              errorMessage = JSON.stringify(event, null, 2);
-            }
-          }
-          
-          console.error('WebSocket error in ChatSystem:', {
-            errorMessage,
-            eventType: event?.type || 'unknown',
-            readyState: ws.readyState,
-            url: ws.url,
-            timestamp: new Date().toISOString()
-          });
-          
-          setConnectionStatus('error');
+          console.error('WebSocket error in ChatSystem:', event);
           addNotification('Connection error. Retrying...', 'error');
         };
         
         ws.onopen = () => {
           console.log('WebSocket connected successfully');
-          setConnectionStatus('connected');
           addNotification('Connected to chat', 'success');
         };
         
@@ -206,7 +186,6 @@ export default function ChatSystem() {
             reason: event.reason,
             wasClean: event.wasClean
           });
-          setConnectionStatus('disconnected');
           if (event.code !== 1000) {
             addNotification('Disconnected from chat', 'error');
           }
@@ -433,6 +412,38 @@ export default function ChatSystem() {
     setIsEmoteMode(!isEmoteMode);
   };
   
+  const getConnectionIcon = () => {
+    switch (connectionStatus) {
+      case 'connected':
+        return <Wifi size={16} color={colors.success} />;
+      case 'connecting':
+      case 'reconnecting':
+        return <AlertCircle size={16} color={colors.warning} />;
+      case 'error':
+      case 'failed':
+        return <WifiOff size={16} color={colors.error} />;
+      default:
+        return <WifiOff size={16} color={colors.textSecondary} />;
+    }
+  };
+  
+  const getConnectionText = () => {
+    switch (connectionStatus) {
+      case 'connected':
+        return 'Connected';
+      case 'connecting':
+        return 'Connecting...';
+      case 'reconnecting':
+        return `Reconnecting... (${connectionRetries})`;
+      case 'error':
+        return 'Connection Error';
+      case 'failed':
+        return 'Connection Failed';
+      default:
+        return 'Disconnected';
+    }
+  };
+  
   const renderMessage = (message: ChatMessage, index: number) => {
     // Format emote messages differently
     const isEmote = message.messageType === 'emote';
@@ -596,11 +607,18 @@ export default function ChatSystem() {
               )}
             </View>
             <View style={styles.headerButtons}>
-              {/* Connection Status Indicator */}
-              <View style={[
-                styles.connectionIndicator,
-                { backgroundColor: connectionStatus === 'connected' ? colors.success : colors.error }
-              ]} />
+              {/* Enhanced Connection Status Indicator */}
+              <View style={styles.connectionStatus}>
+                {getConnectionIcon()}
+                <Text style={[
+                  styles.connectionText,
+                  { color: connectionStatus === 'connected' ? colors.success : 
+                           connectionStatus === 'connecting' || connectionStatus === 'reconnecting' ? colors.warning : 
+                           colors.error }
+                ]}>
+                  {getConnectionText()}
+                </Text>
+              </View>
               
               <TouchableOpacity 
                 style={styles.headerButton}
@@ -1008,11 +1026,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  connectionIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 4,
+  connectionStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceDark,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    gap: 4,
+  },
+  connectionText: {
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   headerButton: {
     flexDirection: 'row',

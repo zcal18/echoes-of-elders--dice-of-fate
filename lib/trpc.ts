@@ -23,6 +23,7 @@ let currentUserName: string | null = null;
 export const setAuthInfo = (userId: string | null, userName: string | null) => {
   currentUserId = userId;
   currentUserName = userName;
+  console.log('Auth info updated:', { userId, userName });
 };
 
 export const trpcClient = trpc.createClient({
@@ -56,6 +57,29 @@ const maxReconnectAttempts = 5;
 const reconnectDelay = 2000;
 let isManualDisconnect = false;
 let reconnectTimeout: NodeJS.Timeout | null = null;
+let connectionListeners: Array<(status: string) => void> = [];
+
+// Connection status management
+let currentStatus = 'disconnected';
+
+const updateConnectionStatus = (status: string) => {
+  if (currentStatus !== status) {
+    currentStatus = status;
+    console.log('WebSocket status changed to:', status);
+    connectionListeners.forEach(listener => listener(status));
+  }
+};
+
+export const addConnectionStatusListener = (listener: (status: string) => void) => {
+  connectionListeners.push(listener);
+  // Immediately call with current status
+  listener(currentStatus);
+  
+  // Return cleanup function
+  return () => {
+    connectionListeners = connectionListeners.filter(l => l !== listener);
+  };
+};
 
 export const connectWebSocket = (userId: string, userName: string, channelId: string = 'general') => {
   if (Platform.OS !== 'web') {
@@ -80,12 +104,14 @@ export const connectWebSocket = (userId: string, userName: string, channelId: st
     const wsUrl = baseUrl.replace(/^http/, 'ws') + '/api/ws';
     console.log('Attempting to connect to WebSocket:', wsUrl);
     
+    updateConnectionStatus('connecting');
     wsConnection = new WebSocket(wsUrl);
     
     wsConnection.onopen = (event) => {
       console.log('WebSocket connected successfully');
       reconnectAttempts = 0;
       isManualDisconnect = false;
+      updateConnectionStatus('connected');
       
       // Clear any pending reconnect timeout
       if (reconnectTimeout) {
@@ -144,11 +170,14 @@ export const connectWebSocket = (userId: string, userName: string, channelId: st
         reconnectAttempts
       });
       
+      updateConnectionStatus('error');
+      
       // Only attempt to reconnect if not manually disconnected and haven't exceeded max attempts
       if (!isManualDisconnect && reconnectAttempts < maxReconnectAttempts) {
         scheduleReconnect(userId, userName, channelId);
       } else if (reconnectAttempts >= maxReconnectAttempts) {
         console.error('Max reconnection attempts reached');
+        updateConnectionStatus('failed');
       }
     };
     
@@ -160,6 +189,13 @@ export const connectWebSocket = (userId: string, userName: string, channelId: st
       });
       
       wsConnection = null;
+      
+      // Update status based on close reason
+      if (event.code === 1000) {
+        updateConnectionStatus('disconnected');
+      } else {
+        updateConnectionStatus('error');
+      }
       
       // Only attempt to reconnect if it wasn't a manual close and we haven't exceeded max attempts
       if (!isManualDisconnect && event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
@@ -178,6 +214,8 @@ export const connectWebSocket = (userId: string, userName: string, channelId: st
       timestamp: new Date().toISOString()
     });
     
+    updateConnectionStatus('error');
+    
     // Schedule reconnect on connection creation failure
     if (!isManualDisconnect && reconnectAttempts < maxReconnectAttempts) {
       scheduleReconnect(userId, userName, channelId);
@@ -192,11 +230,14 @@ const scheduleReconnect = (userId: string, userName: string, channelId: string) 
     clearTimeout(reconnectTimeout);
   }
   
+  const delay = reconnectDelay * Math.min(reconnectAttempts + 1, 5); // Exponential backoff with cap
+  
   reconnectTimeout = setTimeout(() => {
     reconnectAttempts++;
-    console.log(`Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts})`);
+    console.log(`Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts}) in ${delay}ms`);
+    updateConnectionStatus('reconnecting');
     connectWebSocket(userId, userName, channelId);
-  }, reconnectDelay * Math.min(reconnectAttempts + 1, 5)); // Exponential backoff with cap
+  }, delay);
 };
 
 export const disconnectWebSocket = (userId: string) => {
@@ -226,6 +267,7 @@ export const disconnectWebSocket = (userId: string) => {
   
   wsConnection = null;
   reconnectAttempts = 0;
+  updateConnectionStatus('disconnected');
 };
 
 export const sendWebSocketMessage = (message: any) => {
@@ -248,7 +290,7 @@ export const sendWebSocketMessage = (message: any) => {
 export const getWebSocketConnection = () => wsConnection;
 
 export const getWebSocketStatus = () => {
-  if (!wsConnection) return 'disconnected';
+  if (!wsConnection) return currentStatus;
   
   switch (wsConnection.readyState) {
     case WebSocket.CONNECTING:
@@ -262,4 +304,15 @@ export const getWebSocketStatus = () => {
     default:
       return 'unknown';
   }
+};
+
+// Reset connection state (useful for testing or manual resets)
+export const resetWebSocketConnection = () => {
+  isManualDisconnect = false;
+  reconnectAttempts = 0;
+  if (reconnectTimeout) {
+    clearTimeout(reconnectTimeout);
+    reconnectTimeout = null;
+  }
+  updateConnectionStatus('disconnected');
 };

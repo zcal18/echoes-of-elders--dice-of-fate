@@ -21,6 +21,32 @@ const userChannels = new Map<string, string>();
 const pvpQueue = new Map<string, any>();
 const guildBattles = new Map<string, any>();
 
+// Connection health monitoring
+const connectionHealth = new Map<string, { lastPing: number; isHealthy: boolean }>();
+const PING_INTERVAL = 30000; // 30 seconds
+const HEALTH_CHECK_INTERVAL = 60000; // 1 minute
+
+// Periodic health check
+setInterval(() => {
+  const now = Date.now();
+  for (const [userId, health] of connectionHealth.entries()) {
+    if (now - health.lastPing > PING_INTERVAL * 2) {
+      health.isHealthy = false;
+      console.log(`User ${userId} connection marked as unhealthy`);
+      
+      // Clean up unhealthy connections
+      const client = connectedClients.get(userId);
+      if (client && client.readyState !== WebSocket.OPEN) {
+        console.log(`Cleaning up dead connection for user ${userId}`);
+        connectedClients.delete(userId);
+        userChannels.delete(userId);
+        connectionHealth.delete(userId);
+        pvpQueue.delete(userId);
+      }
+    }
+  }
+}, HEALTH_CHECK_INTERVAL);
+
 app.get("/ws", upgradeWebSocket((c) => {
   return {
     onMessage: (event, ws) => {
@@ -28,11 +54,50 @@ app.get("/ws", upgradeWebSocket((c) => {
         const data = JSON.parse(event.data.toString());
         console.log('WebSocket message received:', data);
         
+        // Update connection health
+        if (data.userId) {
+          connectionHealth.set(data.userId, {
+            lastPing: Date.now(),
+            isHealthy: true
+          });
+        }
+        
         switch (data.type) {
+          case 'ping':
+            // Respond to ping with pong
+            try {
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                  type: 'pong',
+                  timestamp: Date.now()
+                }));
+              }
+            } catch (error) {
+              console.error('Error sending pong:', error instanceof Error ? error.message : String(error));
+            }
+            break;
+            
           case 'join':
             console.log(`User ${data.userName} (${data.userId}) joining channel ${data.channelId}`);
+            
+            // Clean up any existing connection for this user
+            const existingClient = connectedClients.get(data.userId);
+            if (existingClient && existingClient !== ws) {
+              try {
+                if (existingClient.readyState === WebSocket.OPEN) {
+                  existingClient.close(1000, 'New connection established');
+                }
+              } catch (error) {
+                console.error('Error closing existing connection:', error instanceof Error ? error.message : String(error));
+              }
+            }
+            
             connectedClients.set(data.userId, ws);
             userChannels.set(data.userId, data.channelId);
+            connectionHealth.set(data.userId, {
+              lastPing: Date.now(),
+              isHealthy: true
+            });
             
             // Broadcast user joined to channel
             broadcastToChannel(data.channelId, {
@@ -47,7 +112,8 @@ app.get("/ws", upgradeWebSocket((c) => {
                 ws.send(JSON.stringify({
                   type: 'joinConfirmed',
                   channelId: data.channelId,
-                  message: `Successfully joined ${data.channelId}`
+                  message: `Successfully joined ${data.channelId}`,
+                  connectedUsers: connectedClients.size
                 }));
               }
             } catch (sendError) {
@@ -60,6 +126,7 @@ app.get("/ws", upgradeWebSocket((c) => {
             const userChannel = userChannels.get(data.userId);
             connectedClients.delete(data.userId);
             userChannels.delete(data.userId);
+            connectionHealth.delete(data.userId);
             
             // Broadcast user left to their channel
             if (userChannel) {
@@ -72,6 +139,14 @@ app.get("/ws", upgradeWebSocket((c) => {
             
           case 'message':
             console.log(`Broadcasting message from ${data.message.sender} to channel ${data.channelId}`);
+            
+            // Validate message data
+            if (!data.message || !data.message.sender || !data.channelId) {
+              console.error('Invalid message data:', data);
+              sendErrorToClient(ws, 'Invalid message format');
+              break;
+            }
+            
             // Broadcast message to all users in the channel except sender
             broadcastToChannel(data.channelId, {
               type: 'message',
@@ -101,11 +176,16 @@ app.get("/ws", upgradeWebSocket((c) => {
 
           // PVP Queue Management
           case 'joinPvpQueue':
+            if (!data.userId || !data.userName) {
+              sendErrorToClient(ws, 'Missing user information for PVP queue');
+              break;
+            }
+            
             pvpQueue.set(data.userId, {
               userId: data.userId,
               userName: data.userName,
-              level: data.level,
-              ranking: data.ranking,
+              level: data.level || 1,
+              ranking: data.ranking || 1000,
               queueTime: Date.now()
             });
             
@@ -129,6 +209,11 @@ app.get("/ws", upgradeWebSocket((c) => {
 
           // Guild Battle Management
           case 'initiateGuildBattle':
+            if (!data.territoryId || !data.attackingGuild || !data.userId) {
+              sendErrorToClient(ws, 'Missing required data for guild battle');
+              break;
+            }
+            
             const battleId = `battle_${Date.now()}`;
             guildBattles.set(battleId, {
               id: battleId,
@@ -184,17 +269,7 @@ app.get("/ws", upgradeWebSocket((c) => {
             
           default:
             console.log('Unknown WebSocket message type:', data.type);
-            // Send error back to client
-            try {
-              if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                  type: 'error',
-                  message: `Unknown message type: ${data.type}`
-                }));
-              }
-            } catch (sendError) {
-              console.error('Error sending unknown type error:', sendError instanceof Error ? sendError.message : String(sendError));
-            }
+            sendErrorToClient(ws, `Unknown message type: ${data.type}`);
         }
       } catch (error) {
         console.error('WebSocket message processing error:', {
@@ -203,17 +278,7 @@ app.get("/ws", upgradeWebSocket((c) => {
           data: event.data
         });
         
-        // Send error back to client
-        try {
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({
-              type: 'error',
-              message: 'Failed to process message'
-            }));
-          }
-        } catch (sendError) {
-          console.error('Failed to send error message:', sendError instanceof Error ? sendError.message : String(sendError));
-        }
+        sendErrorToClient(ws, 'Failed to process message');
       }
     },
     onClose: (event, ws) => {
@@ -231,6 +296,7 @@ app.get("/ws", upgradeWebSocket((c) => {
           
           connectedClients.delete(userId);
           userChannels.delete(userId);
+          connectionHealth.delete(userId);
           pvpQueue.delete(userId);
           
           if (channelId) {
@@ -250,24 +316,29 @@ app.get("/ws", upgradeWebSocket((c) => {
         timestamp: new Date().toISOString()
       });
       
-      // Send error notification to client if connection is still open
-      try {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({
-            type: 'error',
-            message: 'WebSocket connection error occurred'
-          }));
-        }
-      } catch (sendError) {
-        console.error('Failed to send error notification:', sendError instanceof Error ? sendError.message : String(sendError));
-      }
+      sendErrorToClient(ws, 'WebSocket connection error occurred');
     }
   };
 }));
 
+function sendErrorToClient(ws: any, message: string) {
+  try {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: 'error',
+        message,
+        timestamp: Date.now()
+      }));
+    }
+  } catch (sendError) {
+    console.error('Failed to send error message:', sendError instanceof Error ? sendError.message : String(sendError));
+  }
+}
+
 function broadcastToChannel(channelId: string, message: any, excludeUserId?: string) {
   console.log(`Broadcasting to channel ${channelId}:`, message, `(excluding ${excludeUserId})`);
   let broadcastCount = 0;
+  let failedConnections: string[] = [];
   
   for (const [userId, ws] of connectedClients.entries()) {
     const userChannelId = userChannels.get(userId);
@@ -277,26 +348,30 @@ function broadcastToChannel(channelId: string, message: any, excludeUserId?: str
           ws.send(JSON.stringify(message));
           broadcastCount++;
         } else {
-          // Remove dead connection
-          console.log(`Removing dead connection for user ${userId}`);
-          connectedClients.delete(userId);
-          userChannels.delete(userId);
+          failedConnections.push(userId);
         }
       } catch (error) {
         console.error(`Error broadcasting to user ${userId}:`, error instanceof Error ? error.message : String(error));
-        // Remove dead connection
-        connectedClients.delete(userId);
-        userChannels.delete(userId);
+        failedConnections.push(userId);
       }
     }
   }
   
-  console.log(`Broadcast sent to ${broadcastCount} users in channel ${channelId}`);
+  // Clean up failed connections
+  failedConnections.forEach(userId => {
+    console.log(`Removing dead connection for user ${userId}`);
+    connectedClients.delete(userId);
+    userChannels.delete(userId);
+    connectionHealth.delete(userId);
+  });
+  
+  console.log(`Broadcast sent to ${broadcastCount} users in channel ${channelId}, cleaned up ${failedConnections.length} dead connections`);
 }
 
 function broadcastToAll(message: any) {
   console.log('Broadcasting to all users:', message);
   let broadcastCount = 0;
+  let failedConnections: string[] = [];
   
   for (const [userId, ws] of connectedClients.entries()) {
     try {
@@ -304,20 +379,23 @@ function broadcastToAll(message: any) {
         ws.send(JSON.stringify(message));
         broadcastCount++;
       } else {
-        // Remove dead connection
-        console.log(`Removing dead connection for user ${userId}`);
-        connectedClients.delete(userId);
-        userChannels.delete(userId);
+        failedConnections.push(userId);
       }
     } catch (error) {
       console.error(`Error broadcasting to user ${userId}:`, error instanceof Error ? error.message : String(error));
-      // Remove dead connection
-      connectedClients.delete(userId);
-      userChannels.delete(userId);
+      failedConnections.push(userId);
     }
   }
   
-  console.log(`Broadcast sent to ${broadcastCount} users`);
+  // Clean up failed connections
+  failedConnections.forEach(userId => {
+    console.log(`Removing dead connection for user ${userId}`);
+    connectedClients.delete(userId);
+    userChannels.delete(userId);
+    connectionHealth.delete(userId);
+  });
+  
+  console.log(`Broadcast sent to ${broadcastCount} users, cleaned up ${failedConnections.length} dead connections`);
 }
 
 function broadcastToGuild(guildId: string, message: any) {
@@ -333,25 +411,34 @@ function broadcastToGuildBattle(battleId: string, message: any) {
   const battle = guildBattles.get(battleId);
   if (battle) {
     const participants = [...battle.attackers, ...battle.defenders];
+    let broadcastCount = 0;
+    let failedConnections: string[] = [];
+    
     participants.forEach(userId => {
       const ws = connectedClients.get(userId);
       if (ws) {
         try {
           if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify(message));
+            broadcastCount++;
           } else {
-            // Remove dead connection
-            connectedClients.delete(userId);
-            userChannels.delete(userId);
+            failedConnections.push(userId);
           }
         } catch (error) {
           console.error('Error broadcasting to guild battle:', error instanceof Error ? error.message : String(error));
-          // Remove dead connection
-          connectedClients.delete(userId);
-          userChannels.delete(userId);
+          failedConnections.push(userId);
         }
       }
     });
+    
+    // Clean up failed connections
+    failedConnections.forEach(userId => {
+      connectedClients.delete(userId);
+      userChannels.delete(userId);
+      connectionHealth.delete(userId);
+    });
+    
+    console.log(`Guild battle broadcast sent to ${broadcastCount} participants, cleaned up ${failedConnections.length} dead connections`);
   }
 }
 
@@ -468,7 +555,35 @@ app.get("/", (c) => {
     message: "API is running",
     connectedUsers: connectedClients.size,
     activeChannels: new Set(userChannels.values()).size,
+    healthyConnections: Array.from(connectionHealth.values()).filter(h => h.isHealthy).length,
+    pvpQueueSize: pvpQueue.size,
+    activeBattles: guildBattles.size,
     timestamp: new Date().toISOString()
+  });
+});
+
+// WebSocket status endpoint
+app.get("/ws-status", (c) => {
+  const healthyConnections = Array.from(connectionHealth.entries()).filter(([_, health]) => health.isHealthy);
+  const unhealthyConnections = Array.from(connectionHealth.entries()).filter(([_, health]) => !health.isHealthy);
+  
+  return c.json({
+    totalConnections: connectedClients.size,
+    healthyConnections: healthyConnections.length,
+    unhealthyConnections: unhealthyConnections.length,
+    activeChannels: Array.from(new Set(userChannels.values())),
+    pvpQueue: pvpQueue.size,
+    guildBattles: guildBattles.size,
+    connectionDetails: Object.fromEntries(
+      Array.from(connectionHealth.entries()).map(([userId, health]) => [
+        userId,
+        {
+          isHealthy: health.isHealthy,
+          lastPing: new Date(health.lastPing).toISOString(),
+          channel: userChannels.get(userId)
+        }
+      ])
+    )
   });
 });
 

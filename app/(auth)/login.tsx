@@ -10,7 +10,14 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   
   const router = useRouter();
-  const { login, isAuthenticated } = useGameStore();
+  const { login, isAuthenticated, username: storedUsername } = useGameStore();
+  
+  // Pre-fill username if available from storage
+  useEffect(() => {
+    if (storedUsername && !username) {
+      setUsername(storedUsername);
+    }
+  }, [storedUsername]);
   
   useEffect(() => {
     if (isAuthenticated) {
