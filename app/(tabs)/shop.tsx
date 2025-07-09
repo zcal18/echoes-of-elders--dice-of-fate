@@ -121,10 +121,10 @@ export default function ShopScreen() {
     }
   ];
 
-  const filteredItems = shopItems.filter(item => {
+  const filteredItems = shopItems ? shopItems.filter(item => {
     if (selectedCategory === 'items') return true;
     return false; // Packages are handled separately
-  });
+  }) : [];
 
   const getRarityColor = (rarity: string) => {
     switch (rarity) {
