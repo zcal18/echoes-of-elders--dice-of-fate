@@ -62,7 +62,7 @@ const getStatBoostText = (item: Item) => {
 };
 
 export default function InventorySystem() {
-  const { activeCharacter, equipItem, useItem, addGold, updateCharacterHealth } = useGameStore();
+  const { activeCharacter, equipItem, useItem, sellItem, updateCharacterHealth } = useGameStore();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   
   if (!activeCharacter) {
@@ -174,12 +174,10 @@ export default function InventorySystem() {
         { 
           text: 'Sell', 
           onPress: () => {
-            // Remove item from inventory and add gold
-            const gameStore = useGameStore.getState();
-            gameStore.removeItem(item.id);
-            gameStore.addGold(sellPrice);
-            
-            Alert.alert('Item Sold', `You sold ${item.name} for ${sellPrice} gold!`);
+            const success = sellItem(item.id);
+            if (!success) {
+              Alert.alert('Error', 'Failed to sell item.');
+            }
           }
         }
       ]
