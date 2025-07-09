@@ -585,9 +585,7 @@ export const useGameStore = create<GameState>()(
               sender: "Generous Lord",
               recipient: newCharacter.name,
               subject: "Welcome to the Realm",
-              message: "Greetings, brave soul. Welcome to this realm of adventure and danger. As a token of my generosity, I bestow upon you 500 gold to aid in your journey. But beware, not everything comes without cost. A time may come when a debt is owed. Tread carefully.
-
-- A Generous Lord",
+              message: "Greetings, brave soul. Welcome to this realm of adventure and danger. As a token of my generosity, I bestow upon you 500 gold to aid in your journey. But beware, not everything comes without cost. A time may come when a debt is owed. Tread carefully.\n\n- A Generous Lord",
               timestamp: Date.now(),
               isRead: false,
               isStarred: false
@@ -1856,28 +1854,21 @@ export const useGameStore = create<GameState>()(
             const spellUnlocks = rewards.unlocks.filter(u => u.startsWith('spell:')).map(u => u.split(':')[1]);
             const itemUnlocks = rewards.unlocks.filter(u => u.startsWith('item:')).map(u => u.split(':')[1]);
             
-            let mailContent = `Your research on ${research.name} has yielded valuable results!
-
-`;
+            let mailContent = `Your research on ${research.name} has yielded valuable results!\n\n`;
             
             if (spellUnlocks.length > 0) {
-              mailContent += "Spells Unlocked:
-";
+              mailContent += "Spells Unlocked:\n";
               spellUnlocks.forEach(spellId => {
                 const spell = spells.find(s => s.id === spellId);
-                mailContent += `- ${spell ? spell.name : spellId}
-`;
+                mailContent += `- ${spell ? spell.name : spellId}\n`;
               });
-              mailContent += "
-";
+              mailContent += "\n";
             }
             
             if (itemUnlocks.length > 0) {
-              mailContent += "Items Unlocked:
-";
+              mailContent += "Items Unlocked:\n";
               itemUnlocks.forEach(itemId => {
-                mailContent += `- ${itemId === 'crafting_kit' ? 'Basic Crafting Kit' : 'Artisan Tools'}
-`;
+                mailContent += `- ${itemId === 'crafting_kit' ? 'Basic Crafting Kit' : 'Artisan Tools'}\n`;
               });
             }
             
