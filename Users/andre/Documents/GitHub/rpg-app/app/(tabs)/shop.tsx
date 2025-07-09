@@ -143,24 +143,24 @@ export default function ShopScreen() {
       inventory: [...(characters[0].inventory || []), item],
     };
 
-    updateCharacter(updatedCharacter);
+    updateCharacter(updatedCharacter.id, updatedCharacter);
     Alert.alert('Purchase Successful', `${item.name} has been added to your inventory.`);
   };
 
   const getRarityColor = (rarity: string) => {
     switch (rarity) {
       case 'common':
-        return COLORS.gray;
+        return COLORS.neutral;
       case 'uncommon':
         return COLORS.success;
       case 'rare':
         return COLORS.info;
       case 'epic':
-        return COLORS.violet;
+        return COLORS.primaryLight;
       case 'legendary':
         return COLORS.warning;
       default:
-        return COLORS.gray;
+        return COLORS.neutral;
     }
   };
 
