@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Dimensions, Image } from 'react-native';
 import colors from '@/constants/colors';
 import { useGameStore } from '@/hooks/useGameStore';
 import { PvpPlayer } from '@/types/game';
@@ -218,6 +218,22 @@ export const PvpCombatSystem = () => {
         <View style={styles.matchContainer}>
           <View style={styles.matchHeader}>
             <View style={styles.playerInfo}>
+              {/* Player Profile Picture Thumbnail */}
+              <View style={styles.profileThumbnailContainer}>
+                {activeCharacter.profileImage ? (
+                  <Image 
+                    source={{ uri: activeCharacter.profileImage }} 
+                    style={styles.profileThumbnail}
+                    defaultSource={require('@/assets/images/icon.png')}
+                  />
+                ) : (
+                  <View style={styles.profileThumbnailPlaceholder}>
+                    <Text style={styles.profileThumbnailText}>
+                      {activeCharacter.name.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+              </View>
               <Text style={styles.playerName} numberOfLines={1} ellipsizeMode="tail">
                 {activeCharacter.name}
               </Text>
@@ -239,6 +255,14 @@ export const PvpCombatSystem = () => {
             <Text style={styles.vsText}>VS</Text>
             
             <View style={styles.playerInfo}>
+              {/* Opponent Profile Picture Thumbnail - Using placeholder since we don't have opponent's image */}
+              <View style={styles.profileThumbnailContainer}>
+                <View style={styles.profileThumbnailPlaceholder}>
+                  <Text style={styles.profileThumbnailText}>
+                    {activePvpMatch.player2.playerName.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              </View>
               <Text style={styles.playerName} numberOfLines={1} ellipsizeMode="tail">
                 {activePvpMatch.player2.playerName}
               </Text>
@@ -645,6 +669,32 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     maxWidth: screenWidth * 0.35,
+  },
+  profileThumbnailContainer: {
+    marginBottom: 8,
+  },
+  profileThumbnail: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.surfaceDark,
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  profileThumbnailPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.primaryDark,
+  },
+  profileThumbnailText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
   },
   playerName: {
     fontSize: Math.min(16, screenWidth * 0.04),

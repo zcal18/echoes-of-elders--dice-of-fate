@@ -531,6 +531,22 @@ export default function CombatSystem() {
       <View style={styles.combatInterface}>
         <View style={styles.combatHeader}>
           <View style={styles.combatParticipant}>
+            {/* Player Profile Picture Thumbnail */}
+            <View style={styles.profileThumbnailContainer}>
+              {activeCharacter.profileImage ? (
+                <Image 
+                  source={{ uri: activeCharacter.profileImage }} 
+                  style={styles.profileThumbnail}
+                  defaultSource={require('@/assets/images/icon.png')}
+                />
+              ) : (
+                <View style={styles.profileThumbnailPlaceholder}>
+                  <Text style={styles.profileThumbnailText}>
+                    {activeCharacter.name.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+            </View>
             <Text style={styles.participantName}>{activeCharacter.name}</Text>
             <View style={styles.healthBarContainer}>
               <View 
@@ -554,6 +570,22 @@ export default function CombatSystem() {
           <Text style={styles.vsText}>VS</Text>
           
           <View style={styles.combatParticipant}>
+            {/* Enemy Profile Picture Thumbnail */}
+            <View style={styles.profileThumbnailContainer}>
+              {selectedEnemy.imageUrl || selectedEnemy.profileImage ? (
+                <Image 
+                  source={{ uri: selectedEnemy.imageUrl || selectedEnemy.profileImage }} 
+                  style={styles.profileThumbnail}
+                  defaultSource={require('@/assets/images/icon.png')}
+                />
+              ) : (
+                <View style={styles.profileThumbnailPlaceholder}>
+                  <Text style={styles.profileThumbnailText}>
+                    {selectedEnemy.name.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+            </View>
             <Text style={styles.participantName}>{selectedEnemy.name}</Text>
             <View style={styles.healthBarContainer}>
               <View 
@@ -948,12 +980,40 @@ const styles = StyleSheet.create({
   },
   combatParticipant: {
     flex: 1,
+    alignItems: 'center',
+  },
+  profileThumbnailContainer: {
+    marginBottom: 8,
+  },
+  profileThumbnail: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.surfaceDark,
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  profileThumbnailPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.primaryDark,
+  },
+  profileThumbnailText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
   },
   participantName: {
     fontSize: 16,
     fontWeight: 'bold',
     color: colors.text,
     marginBottom: 8,
+    textAlign: 'center',
   },
   healthBarContainer: {
     height: 8,
@@ -961,6 +1021,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     overflow: 'hidden',
     marginBottom: 4,
+    width: '90%',
   },
   healthBar: {
     height: '100%',
@@ -969,22 +1030,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
     fontWeight: '600',
+    textAlign: 'center',
   },
   faintedStatus: {
     fontSize: 12,
     color: colors.error,
     fontWeight: 'bold',
     marginTop: 2,
+    textAlign: 'center',
   },
   chargeStatus: {
     fontSize: 12,
     color: colors.warning,
     fontWeight: 'bold',
     marginTop: 2,
+    textAlign: 'center',
   },
   statusEffects: {
     fontSize: 14,
     marginTop: 2,
+    textAlign: 'center',
   },
   vsText: {
     fontSize: 20,
