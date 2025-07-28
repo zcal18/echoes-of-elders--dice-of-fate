@@ -3,6 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, Alert } from
 import { useGameStore } from '@/hooks/useGameStore';
 import COLORS from '@/constants/colors';
 import { Stack } from 'expo-router';
+import { Item } from '@/types/game';
 
 export default function ShopScreen() {
   // Define the type for shop items
@@ -18,6 +19,31 @@ export default function ShopScreen() {
     requirements?: Record<string, number>;
     effects?: string[];
   }
+
+  // Convert ShopItem to Item
+  const convertToItem = (shopItem: ShopItem): Item => {
+    // Map category to proper Item type
+    let itemType: 'weapon' | 'armor' | 'potion' | 'accessory' | 'tool' | 'material' | 'quest';
+    if (shopItem.category === 'consumable') {
+      itemType = 'potion';
+    } else {
+      itemType = shopItem.category as 'weapon' | 'armor' | 'potion' | 'accessory' | 'tool' | 'material' | 'quest';
+    }
+    
+    return {
+      id: shopItem.id,
+      name: shopItem.name,
+      description: shopItem.description,
+      type: itemType,
+      rarity: shopItem.rarity,
+      value: shopItem.price,
+      stats: shopItem.stats,
+      effects: shopItem.effects?.map(effect => ({
+        type: 'heal' as const,
+        value: 25
+      }))
+    };
+  };
 
   // Mock data for shop items - in a real app, this would come from the store or API
   const mockShopItems: ShopItem[] = [
@@ -137,14 +163,17 @@ export default function ShopScreen() {
       }
     }
 
+    // Convert shop item to inventory item
+    const inventoryItem = convertToItem(item);
+    
     // Update character inventory and gold
     const updatedCharacter = {
       ...activeCharacter,
       gold: activeCharacter.gold - item.price,
-      inventory: [...(activeCharacter.inventory || []), item],
+      inventory: [...(activeCharacter.inventory || []), inventoryItem],
     };
 
-    updateCharacter(updatedCharacter.id, updatedCharacter);
+    updateCharacter(activeCharacter.id, updatedCharacter);
     Alert.alert('Purchase Successful', `${item.name} has been added to your inventory.`);
   };
 
