@@ -121,7 +121,8 @@ export default function ShopScreen() {
       return;
     }
 
-    if (characters[0].gold < item.price) {
+    const activeCharacter = characters[0];
+    if (activeCharacter.gold < item.price) {
       Alert.alert('Insufficient Gold', 'You do not have enough gold to purchase this item.');
       return;
     }
@@ -129,7 +130,7 @@ export default function ShopScreen() {
     // Check requirements for weapons and armor
     if (item.category !== 'consumable' && item.requirements) {
       for (const [stat, value] of Object.entries(item.requirements)) {
-        if ((characters[0].stats as any)[stat] < value) {
+        if ((activeCharacter.stats as any)[stat] < value) {
           Alert.alert('Requirement Not Met', `You need at least ${value} ${stat} to use this item.`);
           return;
         }
@@ -138,9 +139,9 @@ export default function ShopScreen() {
 
     // Update character inventory and gold
     const updatedCharacter = {
-      ...characters[0],
-      gold: characters[0].gold - item.price,
-      inventory: [...(characters[0].inventory || []), item],
+      ...activeCharacter,
+      gold: activeCharacter.gold - item.price,
+      inventory: [...(activeCharacter.inventory || []), item],
     };
 
     updateCharacter(updatedCharacter.id, updatedCharacter);
@@ -150,17 +151,17 @@ export default function ShopScreen() {
   const getRarityColor = (rarity: string) => {
     switch (rarity) {
       case 'common':
-        return COLORS.neutral;
+        return COLORS.textSecondary;
       case 'uncommon':
         return COLORS.success;
       case 'rare':
         return COLORS.info;
       case 'epic':
-        return COLORS.primaryLight;
+        return COLORS.primary;
       case 'legendary':
         return COLORS.warning;
       default:
-        return COLORS.neutral;
+        return COLORS.textSecondary;
     }
   };
 
