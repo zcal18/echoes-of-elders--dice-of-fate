@@ -49,6 +49,10 @@ export default {
   overlayLight: 'rgba(0, 0, 0, 0.3)',
   overlayDark: 'rgba(0, 0, 0, 0.7)',
   
+  // Additional colors
+  gray: '#6B7280',
+  violet: '#8B5CF6',
+  
   // Kingdom/Territory colors
   royal: '#9333EA',
   royalLight: '#C084FC',
